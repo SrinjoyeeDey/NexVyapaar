@@ -14,7 +14,165 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_insights: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          insight_type: string
+          is_read: boolean | null
+          priority: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          insight_type: string
+          is_read?: boolean | null
+          priority?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          insight_type?: string
+          is_read?: boolean | null
+          priority?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_feedback: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          feedback_date: string
+          feedback_text: string
+          id: string
+          rating: number | null
+          sentiment: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_name?: string | null
+          feedback_date?: string
+          feedback_text: string
+          id?: string
+          rating?: number | null
+          sentiment?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_name?: string | null
+          feedback_date?: string
+          feedback_text?: string
+          id?: string
+          rating?: number | null
+          sentiment?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          business_name: string
+          business_type: Database["public"]["Enums"]["business_type"] | null
+          created_at: string | null
+          id: string
+          location: string | null
+          subscription_tier:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          updated_at: string | null
+        }
+        Insert: {
+          business_name: string
+          business_type?: Database["public"]["Enums"]["business_type"] | null
+          created_at?: string | null
+          id: string
+          location?: string | null
+          subscription_tier?:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          updated_at?: string | null
+        }
+        Update: {
+          business_name?: string
+          business_type?: Database["public"]["Enums"]["business_type"] | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          subscription_tier?:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sales_data: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          price: number
+          product_name: string
+          quantity: number
+          sale_date: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          price: number
+          product_name: string
+          quantity: number
+          sale_date?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          price?: number
+          product_name?: string
+          quantity?: number
+          sale_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_data_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +181,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      business_type:
+        | "cafe"
+        | "salon"
+        | "shop"
+        | "restaurant"
+        | "tuition"
+        | "other"
+      subscription_tier: "free" | "premium"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +315,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      business_type: [
+        "cafe",
+        "salon",
+        "shop",
+        "restaurant",
+        "tuition",
+        "other",
+      ],
+      subscription_tier: ["free", "premium"],
+    },
   },
 } as const
