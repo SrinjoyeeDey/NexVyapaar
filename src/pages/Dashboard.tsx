@@ -1,0 +1,296 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  ShoppingCart, 
+  Users,
+  ArrowUpRight,
+  Sparkles,
+  LogOut
+} from "lucide-react";
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
+
+const salesData = [
+  { month: 'Jan', sales: 12000, profit: 4800 },
+  { month: 'Feb', sales: 15000, profit: 6000 },
+  { month: 'Mar', sales: 11000, profit: 4400 },
+  { month: 'Apr', sales: 18000, profit: 7200 },
+  { month: 'May', sales: 22000, profit: 8800 },
+  { month: 'Jun', sales: 25000, profit: 10000 },
+];
+
+const categoryData = [
+  { name: 'Coffee', value: 35, color: 'hsl(173 80% 40%)' },
+  { name: 'Pastries', value: 25, color: 'hsl(38 92% 50%)' },
+  { name: 'Sandwiches', value: 20, color: 'hsl(199 89% 48%)' },
+  { name: 'Others', value: 20, color: 'hsl(215 16% 47%)' },
+];
+
+const Dashboard = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      navigate("/auth");
+    }
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    navigate("/");
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-display font-bold">SmartBizGrow</h1>
+              <p className="text-xs text-muted-foreground">My Awesome Cafe</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleLogout}
+            className="gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-display font-bold mb-2">
+            Welcome back! 👋
+          </h2>
+          <p className="text-muted-foreground">
+            Here's what's happening with your business today
+          </p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="stat-card border-l-4 border-l-primary">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Revenue
+              </CardTitle>
+              <DollarSign className="w-5 h-5 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">₹25,000</div>
+              <p className="text-xs text-green-600 flex items-center gap-1 mt-2">
+                <TrendingUp className="w-3 h-3" />
+                +12.5% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="stat-card border-l-4 border-l-accent">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Orders
+              </CardTitle>
+              <ShoppingCart className="w-5 h-5 text-accent" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">342</div>
+              <p className="text-xs text-green-600 flex items-center gap-1 mt-2">
+                <TrendingUp className="w-3 h-3" />
+                +8.2% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="stat-card border-l-4 border-l-secondary">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Customers
+              </CardTitle>
+              <Users className="w-5 h-5 text-secondary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">158</div>
+              <p className="text-xs text-green-600 flex items-center gap-1 mt-2">
+                <TrendingUp className="w-3 h-3" />
+                +15.3% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="stat-card border-l-4 border-l-purple-500">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Profit Margin
+              </CardTitle>
+              <ArrowUpRight className="w-5 h-5 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">40%</div>
+              <p className="text-xs text-red-600 flex items-center gap-1 mt-2">
+                <TrendingDown className="w-3 h-3" />
+                -2.1% from last month
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Sales Trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                Sales & Profit Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '0.5rem'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="sales" 
+                    stroke="hsl(173 80% 40%)" 
+                    strokeWidth={3}
+                    dot={{ fill: 'hsl(173 80% 40%)', r: 4 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="profit" 
+                    stroke="hsl(38 92% 50%)" 
+                    strokeWidth={3}
+                    dot={{ fill: 'hsl(38 92% 50%)', r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Category Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-accent" />
+                Sales by Category
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* AI Insights Card */}
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              AI Business Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 rounded-lg bg-card border border-card-border">
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 mt-2" />
+                <div>
+                  <h4 className="font-semibold mb-1">Coffee sales trending up 📈</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Your coffee category is performing exceptionally well. Consider promoting specialty coffee drinks to maximize revenue.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg bg-card border border-card-border">
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full bg-amber-500 mt-2" />
+                <div>
+                  <h4 className="font-semibold mb-1">Inventory alert ⚠️</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Pastry supplies running low. Restock within 3 days to avoid stockouts during peak hours.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg bg-card border border-card-border">
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full bg-blue-500 mt-2" />
+                <div>
+                  <h4 className="font-semibold mb-1">Customer retention insight 💡</h4>
+                  <p className="text-sm text-muted-foreground">
+                    15% of customers visited 3+ times this month. Launch a loyalty program to boost repeat visits.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+};
+
+export default Dashboard;
