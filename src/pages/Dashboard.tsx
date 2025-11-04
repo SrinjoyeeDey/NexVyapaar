@@ -10,7 +10,10 @@ import {
   Users,
   ArrowUpRight,
   Sparkles,
-  LogOut
+  LogOut,
+  BarChart3,
+  Brain,
+  Lightbulb
 } from "lucide-react";
 import { 
   LineChart, 
@@ -240,6 +243,72 @@ const Dashboard = () => {
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-primary/20"
+            onClick={() => navigate("/analytics")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <BarChart3 className="w-5 h-5" />
+                Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Upload CSV files, visualize trends, and get AI-powered forecasts
+              </p>
+              <Button variant="outline" className="w-full gap-2">
+                View Analytics
+                <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-accent/20"
+            onClick={() => navigate("/advisor")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-accent">
+                <Brain className="w-5 h-5" />
+                AI Advisor
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Chat with AI, get smart tips, and voice-enabled business coaching
+              </p>
+              <Button variant="outline" className="w-full gap-2">
+                Talk to AI
+                <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-secondary/20"
+            onClick={() => navigate("/insights")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-secondary">
+                <Lightbulb className="w-5 h-5" />
+                Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Sentiment analysis, churn prediction, and AI-generated content
+              </p>
+              <Button variant="outline" className="w-full gap-2">
+                View Insights
+                <ArrowUpRight className="w-4 h-4" />
+              </Button>
             </CardContent>
           </Card>
         </div>

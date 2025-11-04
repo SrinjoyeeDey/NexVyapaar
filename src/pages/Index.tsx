@@ -8,7 +8,8 @@ import {
   TrendingUp,
   Sparkles,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  Lightbulb
 } from "lucide-react";
 
 const Index = () => {
@@ -19,19 +20,22 @@ const Index = () => {
       icon: BarChart3,
       title: "Smart Analytics",
       description: "Transform sales data into actionable insights with beautiful visualizations and trend analysis",
-      gradient: "from-primary to-secondary"
+      gradient: "from-primary to-secondary",
+      link: "/analytics"
     },
     {
       icon: Brain,
       title: "AI Business Advisor",
       description: "Get personalized recommendations to boost revenue, reduce costs, and optimize operations",
-      gradient: "from-accent to-orange-500"
+      gradient: "from-accent to-orange-500",
+      link: "/advisor"
     },
     {
-      icon: MessageSquare,
+      icon: Lightbulb,
       title: "Customer Insights",
       description: "Understand sentiment, predict churn, and create winning marketing campaigns powered by AI",
-      gradient: "from-purple-500 to-pink-500"
+      gradient: "from-purple-500 to-pink-500",
+      link: "/insights"
     }
   ];
 
@@ -119,7 +123,9 @@ const Index = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {features.map((feature, index) => (
-              <FeatureCard key={index} {...feature} />
+              <div key={index} onClick={() => navigate(feature.link)} className="cursor-pointer">
+                <FeatureCard {...feature} />
+              </div>
             ))}
           </div>
         </div>
