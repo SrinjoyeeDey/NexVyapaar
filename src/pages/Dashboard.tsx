@@ -166,6 +166,55 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Success Stories Carousel */}
+        <Card className="mb-8 border-2 border-accent/20 bg-gradient-to-r from-accent/5 to-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-accent" />
+              Success Spotlight 🌟
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">Real wins from business owners like you</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                {
+                  name: "Priya's Boutique",
+                  metric: "+35% Sales",
+                  story: "AI suggested Instagram reels during festival season—sales skyrocketed!",
+                  icon: "🛍️"
+                },
+                {
+                  name: "Raj's Cafe",
+                  metric: "+28% Repeat Visits",
+                  story: "Loyalty program from AI advisor brought customers back 3x more",
+                  icon: "☕"
+                },
+                {
+                  name: "Maya's Salon",
+                  metric: "₹45K Saved",
+                  story: "Inventory insights prevented overstocking—huge cost savings!",
+                  icon: "💇"
+                }
+              ].map((story, idx) => (
+                <div 
+                  key={idx}
+                  className="p-4 rounded-lg bg-card border border-border hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">{story.icon}</span>
+                    <div>
+                      <h4 className="font-semibold text-sm">{story.name}</h4>
+                      <p className="text-xs text-accent font-bold">{story.metric}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{story.story}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Sales Trend */}
