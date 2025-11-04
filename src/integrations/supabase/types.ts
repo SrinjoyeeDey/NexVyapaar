@@ -55,6 +55,118 @@ export type Database = {
           },
         ]
       }
+      community_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          boost_until: string | null
+          category: string
+          comments_count: number | null
+          content: string
+          created_at: string
+          id: string
+          likes_count: number | null
+          media_urls: string[] | null
+          moderation_flags: string[] | null
+          moderation_scores: Json | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          boost_until?: string | null
+          category: string
+          comments_count?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          likes_count?: number | null
+          media_urls?: string[] | null
+          moderation_flags?: string[] | null
+          moderation_scores?: Json | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          boost_until?: string | null
+          category?: string
+          comments_count?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          likes_count?: number | null
+          media_urls?: string[] | null
+          moderation_flags?: string[] | null
+          moderation_scores?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customer_feedback: {
         Row: {
           created_at: string | null
@@ -98,9 +210,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           business_name: string
           business_type: Database["public"]["Enums"]["business_type"] | null
           created_at: string | null
+          display_name: string | null
           id: string
           location: string | null
           subscription_tier:
@@ -109,9 +223,11 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           business_name: string
           business_type?: Database["public"]["Enums"]["business_type"] | null
           created_at?: string | null
+          display_name?: string | null
           id: string
           location?: string | null
           subscription_tier?:
@@ -120,9 +236,11 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           business_name?: string
           business_type?: Database["public"]["Enums"]["business_type"] | null
           created_at?: string | null
+          display_name?: string | null
           id?: string
           location?: string | null
           subscription_tier?:
@@ -172,6 +290,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_badges: {
+        Row: {
+          badge_type: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_type: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_type?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
