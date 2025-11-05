@@ -362,6 +362,39 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Community Pulse */}
+        <Card className="mb-8 border-2 border-accent/20 bg-gradient-to-br from-accent/5 to-purple-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-accent" />
+              Community Pulse 💬
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">Latest from your fellow business owners</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="p-3 rounded-lg bg-card border border-border hover:shadow-md transition-all cursor-pointer">
+              <p className="text-sm font-semibold mb-1">Top Tip: Bundle deals work!</p>
+              <p className="text-xs text-muted-foreground">
+                "Offering combo meals increased my lunch sales by 40%" - Raj's Cafe
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-card border border-border hover:shadow-md transition-all cursor-pointer">
+              <p className="text-sm font-semibold mb-1">🔥 Hot Offer: Festival discount</p>
+              <p className="text-xs text-muted-foreground">
+                "30% off on all services this Diwali - Limited time!" - Maya's Salon
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 mt-4"
+              onClick={() => navigate("/community")}
+            >
+              Join Community
+              <ArrowUpRight className="w-4 h-4" />
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* AI Insights Card */}
         <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
           <CardHeader>
