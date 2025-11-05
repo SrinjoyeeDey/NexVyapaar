@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import GoalSetterModal from "@/components/GoalSetterModal";
+import SustainabilityWidget from "@/components/SustainabilityWidget";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -51,6 +53,7 @@ const categoryData = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -104,7 +107,10 @@ const Dashboard = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="stat-card border-l-4 border-l-primary">
+          <Card 
+            className="stat-card border-l-4 border-l-primary cursor-pointer hover:shadow-lg transition-all"
+            onClick={() => setGoalModalOpen(true)}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Revenue
@@ -116,6 +122,9 @@ const Dashboard = () => {
               <p className="text-xs text-green-600 flex items-center gap-1 mt-2">
                 <TrendingUp className="w-3 h-3" />
                 +12.5% from last month
+              </p>
+              <p className="text-xs text-primary mt-2 font-semibold">
+                Click to set goal →
               </p>
             </CardContent>
           </Card>
@@ -447,6 +456,32 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Green Score + Goal Modal */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <SustainabilityWidget />
+          
+          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                Quick Goal Setting
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Let AI create a personalized roadmap to achieve your business targets
+              </p>
+              <Button 
+                onClick={() => setGoalModalOpen(true)}
+                className="w-full gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                Set a Goal
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* AI Insights Card */}
         <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
           <CardHeader>
@@ -491,6 +526,8 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+        
+        <GoalSetterModal open={goalModalOpen} onOpenChange={setGoalModalOpen} />
       </main>
     </div>
   );

@@ -16,7 +16,8 @@ import {
   LogOut,
   ThumbsUp,
   ThumbsDown,
-  Award
+  Award,
+  Loader2
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,8 @@ const Insights = () => {
   const [reviewText, setReviewText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [sentiment, setSentiment] = useState<any>(null);
+  const [generatingContent, setGeneratingContent] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<string>("");
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -53,25 +56,28 @@ const Insights = () => {
     }
 
     setAnalyzing(true);
-    // Simulate AI sentiment analysis (will integrate Lovable AI in next step)
-    setTimeout(() => {
-      const mockSentiment = {
-        overall: Math.random() > 0.5 ? "positive" : "negative",
-        score: Math.random(),
-        emotions: [
-          { name: "Happy", value: Math.floor(Math.random() * 100) },
-          { name: "Satisfied", value: Math.floor(Math.random() * 100) },
-          { name: "Neutral", value: Math.floor(Math.random() * 100) },
-          { name: "Frustrated", value: Math.floor(Math.random() * 100) },
-        ]
-      };
-      setSentiment(mockSentiment);
-      setAnalyzing(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-sentiment', {
+        body: { text: reviewText }
+      });
+
+      if (error) throw error;
+
+      setSentiment(data.sentiment);
       toast({
         title: "Analysis Complete! 🎯",
-        description: `Sentiment: ${mockSentiment.overall}`
+        description: `Sentiment: ${data.sentiment.overall}`
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Error analyzing sentiment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to analyze sentiment. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const sentimentData = [
@@ -87,6 +93,46 @@ const Insights = () => {
     { metric: "Loyalty", value: 70 },
     { metric: "Responsiveness", value: 65 }
   ];
+
+  const generateContent = async (type: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Premium Required",
+        description: "Upgrade to generate AI content",
+        variant: "destructive"
+      });
+      navigate("/billing");
+      return;
+    }
+
+    setGeneratingContent(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: {
+          type,
+          businessInfo: "My Awesome Cafe - serving premium coffee and pastries",
+          tone: "friendly and exciting"
+        }
+      });
+
+      if (error) throw error;
+
+      setGeneratedContent(data.content);
+      toast({
+        title: "Content Generated! ✨",
+        description: `Your ${type} content is ready`
+      });
+    } catch (error) {
+      console.error('Error generating content:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate content",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingContent(false);
+    }
+  };
 
   const PremiumGate = ({ children, feature }: { children: React.ReactNode, feature: string }) => {
     if (isPremium) return <>{children}</>;
@@ -308,23 +354,59 @@ const Insights = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button variant="outline" className="h-auto py-6 flex-col gap-2">
-                  <MessageSquare className="w-6 h-6 text-primary" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Button 
+                  variant="outline" 
+                  className="h-auto py-6 flex-col gap-2"
+                  onClick={() => generateContent("social")}
+                  disabled={generatingContent}
+                >
+                  {generatingContent ? <Loader2 className="w-6 h-6 animate-spin" /> : <MessageSquare className="w-6 h-6 text-primary" />}
                   <span className="font-semibold">Social Posts</span>
                   <span className="text-xs text-muted-foreground">Instagram, Facebook captions</span>
                 </Button>
-                <Button variant="outline" className="h-auto py-6 flex-col gap-2">
-                  <FileText className="w-6 h-6 text-accent" />
+                <Button 
+                  variant="outline" 
+                  className="h-auto py-6 flex-col gap-2"
+                  onClick={() => generateContent("email")}
+                  disabled={generatingContent}
+                >
+                  {generatingContent ? <Loader2 className="w-6 h-6 animate-spin" /> : <FileText className="w-6 h-6 text-accent" />}
                   <span className="font-semibold">Email Campaigns</span>
                   <span className="text-xs text-muted-foreground">Newsletters, promotions</span>
                 </Button>
-                <Button variant="outline" className="h-auto py-6 flex-col gap-2">
-                  <ImageIcon className="w-6 h-6 text-secondary" />
+                <Button 
+                  variant="outline" 
+                  className="h-auto py-6 flex-col gap-2"
+                  onClick={() => generateContent("ad")}
+                  disabled={generatingContent}
+                >
+                  {generatingContent ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-6 h-6 text-secondary" />}
                   <span className="font-semibold">Ad Copy</span>
                   <span className="text-xs text-muted-foreground">Google, Meta ads</span>
                 </Button>
               </div>
+
+              {generatedContent && (
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 mb-4">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    Generated Content
+                  </h4>
+                  <p className="text-sm whitespace-pre-wrap">{generatedContent}</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedContent);
+                      toast({ title: "Copied to clipboard!" });
+                    }}
+                  >
+                    Copy to Clipboard
+                  </Button>
+                </div>
+              )}
 
               <div className="mt-6 p-4 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
                 <div className="flex items-start gap-3">

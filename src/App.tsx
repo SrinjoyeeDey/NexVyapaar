@@ -11,6 +11,7 @@ import Advisor from "./pages/Advisor";
 import Community from "./pages/Community";
 import Insights from "./pages/Insights";
 import Integrations from "./pages/Integrations";
+import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/community" element={<Community />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/integrations" element={<Integrations />} />
+          <Route path="/billing" element={<Billing />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
