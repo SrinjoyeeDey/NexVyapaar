@@ -13,7 +13,10 @@ import {
   LogOut,
   BarChart3,
   Brain,
-  Lightbulb
+  Lightbulb,
+  Zap,
+  Award,
+  Target
 } from "lucide-react";
 import { 
   LineChart, 
@@ -296,8 +299,8 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Quick Actions - Row 1 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card 
             className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-primary/20"
             onClick={() => navigate("/analytics")}
@@ -358,6 +361,55 @@ const Dashboard = () => {
                 View Insights
                 <ArrowUpRight className="w-4 h-4" />
               </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions - Row 2 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-accent/20"
+            onClick={() => navigate("/integrations")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-accent">
+                <Zap className="w-5 h-5" />
+                Integrations
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Connect WhatsApp, QuickBooks, Google My Business, and more
+              </p>
+              <Button variant="outline" className="w-full gap-2">
+                Connect Tools
+                <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-purple-500" />
+                Your Achievements
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 mb-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                </div>
+                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-accent" />
+                </div>
+                <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center opacity-50">
+                  <Users className="w-6 h-6 text-secondary" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                2 badges earned • 3 challenges available
+              </p>
             </CardContent>
           </Card>
         </div>
