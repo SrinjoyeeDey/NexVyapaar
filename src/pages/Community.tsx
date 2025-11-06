@@ -299,16 +299,33 @@ const Community = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleLike(post.id)}
-                      className="gap-2"
+                      className="gap-2 hover:text-red-500 transition-colors"
                     >
                       <Heart className="w-4 h-4" />
                       {post.likes_count}
                     </Button>
-                    <Button variant="ghost" size="sm" className="gap-2">
+                    <Button variant="ghost" size="sm" className="gap-2 hover:text-blue-500 transition-colors">
                       <MessageSquare className="w-4 h-4" />
                       {post.comments_count}
                     </Button>
-                    <Button variant="ghost" size="sm" className="gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-2 hover:text-green-500 transition-colors"
+                      onClick={() => {
+                        navigator.share?.({
+                          title: post.title,
+                          text: post.content,
+                          url: window.location.href
+                        }).catch(() => {
+                          navigator.clipboard.writeText(window.location.href);
+                          toast({
+                            title: "Link Copied! 📋",
+                            description: "Share link copied to clipboard"
+                          });
+                        });
+                      }}
+                    >
                       <Share2 className="w-4 h-4" />
                       Share
                     </Button>

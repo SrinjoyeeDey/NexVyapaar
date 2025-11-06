@@ -12,6 +12,9 @@ import Community from "./pages/Community";
 import Insights from "./pages/Insights";
 import Integrations from "./pages/Integrations";
 import Billing from "./pages/Billing";
+import Transactions from "./pages/Transactions";
+import VoiceCommands from "./pages/VoiceCommands";
+import CompetitorAnalysis from "./pages/CompetitorAnalysis";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +35,9 @@ const App = () => (
           <Route path="/insights" element={<Insights />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/billing" element={<Billing />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/voice" element={<VoiceCommands />} />
+          <Route path="/competitor-analysis" element={<CompetitorAnalysis />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

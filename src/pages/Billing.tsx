@@ -15,6 +15,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import Confetti from "react-confetti";
 
 const Billing = () => {
@@ -61,16 +62,38 @@ const Billing = () => {
   const handleCheckout = async () => {
     setProcessing(true);
     
-    // Simulate payment processing
     toast({
       title: "Processing payment...",
       description: `Redirecting to ${gateway === "stripe" ? "Stripe" : "Razorpay"} checkout`
     });
 
-    // In production, this would call a real payment API
+    // Simulate payment and create transaction record
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      const { error } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          amount: 299,
+          currency: "INR",
+          payment_gateway: gateway,
+          transaction_id: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          status: "completed",
+          subscription_type: "monthly",
+          metadata: {
+            plan: "premium",
+            features: features.premium
+          }
+        });
+
+      if (error) {
+        console.error("Transaction creation error:", error);
+      }
+    }
+
     setTimeout(() => {
       setProcessing(false);
-      // Simulate successful payment
       navigate("/billing?success=true");
     }, 2000);
   };

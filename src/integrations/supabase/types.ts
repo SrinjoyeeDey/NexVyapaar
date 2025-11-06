@@ -55,6 +55,39 @@ export type Database = {
           },
         ]
       }
+      ai_recommendations: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          impact_score: number | null
+          is_read: boolean | null
+          recommendation_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          impact_score?: number | null
+          is_read?: boolean | null
+          recommendation_type: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          impact_score?: number | null
+          is_read?: boolean | null
+          recommendation_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       community_comments: {
         Row: {
           content: string
@@ -290,6 +323,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json | null
+          payment_gateway: string
+          status: string
+          subscription_type: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          payment_gateway: string
+          status?: string
+          subscription_type?: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          payment_gateway?: string
+          status?: string
+          subscription_type?: string | null
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_badges: {
         Row: {

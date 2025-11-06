@@ -194,33 +194,40 @@ const Dashboard = () => {
                   name: "Priya's Boutique",
                   metric: "+35% Sales",
                   story: "AI suggested Instagram reels during festival season—sales skyrocketed!",
-                  icon: "🛍️"
+                  image: "success-retail-1.jpg"
                 },
                 {
                   name: "Raj's Cafe",
                   metric: "+28% Repeat Visits",
                   story: "Loyalty program from AI advisor brought customers back 3x more",
-                  icon: "☕"
+                  image: "success-cafe-1.jpg"
                 },
                 {
                   name: "Maya's Salon",
                   metric: "₹45K Saved",
                   story: "Inventory insights prevented overstocking—huge cost savings!",
-                  icon: "💇"
+                  image: "success-restaurant-1.jpg"
                 }
               ].map((story, idx) => (
                 <div 
                   key={idx}
-                  className="p-4 rounded-lg bg-card border border-border hover:shadow-md transition-all"
+                  className="relative overflow-hidden rounded-lg bg-card border border-border hover:shadow-md transition-all group"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">{story.icon}</span>
-                    <div>
-                      <h4 className="font-semibold text-sm">{story.name}</h4>
+                  <div className="aspect-video relative overflow-hidden">
+                    <img 
+                      src={`/src/assets/${story.image}`}
+                      alt={story.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <h4 className="font-semibold text-sm text-white">{story.name}</h4>
                       <p className="text-xs text-accent font-bold">{story.metric}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">{story.story}</p>
+                  <div className="p-3">
+                    <p className="text-xs text-muted-foreground">{story.story}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -375,6 +382,72 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions - Row 2 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-purple-500/20"
+            onClick={() => navigate("/transactions")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-purple-600">
+                <Zap className="w-5 h-5" />
+                Transactions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Track all your payments, subscriptions, and transaction history
+              </p>
+              <Button variant="outline" className="w-full gap-2">
+                View Payments
+                <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-blue-500/20"
+            onClick={() => navigate("/voice")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-600">
+                <Sparkles className="w-5 h-5" />
+                Voice Control
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Control your business with voice commands and AI assistant
+              </p>
+              <Button variant="outline" className="w-full gap-2">
+                Try Voice
+                <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-red-500/20"
+            onClick={() => navigate("/competitor-analysis")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <Target className="w-5 h-5" />
+                Competitor Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                AI-powered competitive intelligence and market insights
+              </p>
+              <Button variant="outline" className="w-full gap-2">
+                Analyze Market
+                <ArrowUpRight className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Integrations & Achievements */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card 
             className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 border-accent/20"
