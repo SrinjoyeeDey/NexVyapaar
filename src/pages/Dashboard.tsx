@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import GoalSetterModal from "@/components/GoalSetterModal";
 import SustainabilityWidget from "@/components/SustainabilityWidget";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -531,7 +532,10 @@ const Dashboard = () => {
 
         {/* Green Score + Goal Modal */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <SustainabilityWidget />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SustainabilityWidget />
+            <NotificationSettings />
+          </div>
           
           <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
             <CardHeader>

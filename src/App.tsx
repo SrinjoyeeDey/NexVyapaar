@@ -24,29 +24,21 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const isAuthPage = window.location.pathname === "/" || window.location.pathname === "/auth";
-  
-  if (isAuthPage) {
-    return <>{children}</>;
-  }
-
-  return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex items-center px-4">
-            <SidebarTrigger />
-          </header>
-          <main className="flex-1">
-            {children}
-          </main>
-        </div>
+const ProtectedLayout = ({ children }: { children: React.ReactNode }) => (
+  <SidebarProvider>
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <div className="flex-1 flex flex-col">
+        <header className="h-14 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex items-center px-4">
+          <SidebarTrigger />
+        </header>
+        <main className="flex-1">
+          {children}
+        </main>
       </div>
-    </SidebarProvider>
-  );
-};
+    </div>
+  </SidebarProvider>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -55,26 +47,28 @@ const App = () => (
       <Sonner />
       <RealtimeNotifications />
       <BrowserRouter>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/advisor" element={<Advisor />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/insights" element={<Insights />} />
-            <Route path="/integrations" element={<Integrations />} />
-            <Route path="/billing" element={<Billing />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/voice" element={<VoiceCommands />} />
-            <Route path="/competitor-analysis" element={<CompetitorAnalysis />} />
-            <Route path="/ar-preview" element={<ARPreview />} />
-            <Route path="/marketing" element={<Marketing />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          
+          {/* Protected routes with sidebar */}
+          <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
+          <Route path="/analytics" element={<ProtectedLayout><Analytics /></ProtectedLayout>} />
+          <Route path="/advisor" element={<ProtectedLayout><Advisor /></ProtectedLayout>} />
+          <Route path="/community" element={<ProtectedLayout><Community /></ProtectedLayout>} />
+          <Route path="/insights" element={<ProtectedLayout><Insights /></ProtectedLayout>} />
+          <Route path="/integrations" element={<ProtectedLayout><Integrations /></ProtectedLayout>} />
+          <Route path="/billing" element={<ProtectedLayout><Billing /></ProtectedLayout>} />
+          <Route path="/transactions" element={<ProtectedLayout><Transactions /></ProtectedLayout>} />
+          <Route path="/voice" element={<ProtectedLayout><VoiceCommands /></ProtectedLayout>} />
+          <Route path="/competitor-analysis" element={<ProtectedLayout><CompetitorAnalysis /></ProtectedLayout>} />
+          <Route path="/ar-preview" element={<ProtectedLayout><ARPreview /></ProtectedLayout>} />
+          <Route path="/marketing" element={<ProtectedLayout><Marketing /></ProtectedLayout>} />
+          
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
