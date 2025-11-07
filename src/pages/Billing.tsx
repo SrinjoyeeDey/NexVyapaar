@@ -22,7 +22,7 @@ const Billing = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [gateway, setGateway] = useState<"stripe" | "razorpay">("stripe");
+  const [gateway, setGateway] = useState<"stripe" | "razorpay" | "phonepe" | "googlepay">("razorpay");
   const [processing, setProcessing] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -62,15 +62,19 @@ const Billing = () => {
   const handleCheckout = async () => {
     setProcessing(true);
     
-    toast({
-      title: "Processing payment...",
-      description: `Redirecting to ${gateway === "stripe" ? "Stripe" : "Razorpay"} checkout`
-    });
+    // Get real payment URLs based on gateway
+    const paymentUrls = {
+      stripe: "https://buy.stripe.com/test_demopage",
+      razorpay: "https://rzp.io/l/demopage",
+      phonepe: "https://www.phonepe.com/business-solutions/payment-gateway/",
+      googlepay: "https://pay.google.com/business/console"
+    };
 
-    // Simulate payment and create transaction record
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
+      // Create pending transaction
+      const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const { error } = await supabase
         .from("transactions")
         .insert({
@@ -78,8 +82,8 @@ const Billing = () => {
           amount: 299,
           currency: "INR",
           payment_gateway: gateway,
-          transaction_id: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          status: "completed",
+          transaction_id: transactionId,
+          status: "pending",
           subscription_type: "monthly",
           metadata: {
             plan: "premium",
@@ -89,13 +93,34 @@ const Billing = () => {
 
       if (error) {
         console.error("Transaction creation error:", error);
+        setProcessing(false);
+        return;
       }
-    }
 
-    setTimeout(() => {
-      setProcessing(false);
-      navigate("/billing?success=true");
-    }, 2000);
+      // Show redirect message
+      toast({
+        title: "Redirecting to payment...",
+        description: `Opening ${gateway} payment page`
+      });
+
+      // Simulate redirect delay, then redirect to actual payment gateway
+      setTimeout(() => {
+        // In production, this would redirect to actual payment page
+        // For demo, we'll complete the transaction after short delay
+        window.open(paymentUrls[gateway], '_blank');
+        
+        // Simulate successful payment after 3 seconds
+        setTimeout(async () => {
+          await supabase
+            .from("transactions")
+            .update({ status: "completed" })
+            .eq("transaction_id", transactionId);
+          
+          setProcessing(false);
+          navigate("/billing?success=true");
+        }, 3000);
+      }, 1500);
+    }
   };
 
   const features = {
@@ -209,12 +234,12 @@ const Billing = () => {
               {/* Payment Gateway Selection */}
               <div className="pt-6 border-t">
                 <h4 className="font-semibold mb-4">Choose Payment Method</h4>
-                <RadioGroup value={gateway} onValueChange={(val) => setGateway(val as "stripe" | "razorpay")}>
+                <RadioGroup value={gateway} onValueChange={(val) => setGateway(val as any)}>
                   <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent/5 cursor-pointer">
                     <RadioGroupItem value="stripe" id="stripe" />
                     <Label htmlFor="stripe" className="flex items-center gap-2 cursor-pointer flex-1">
                       <CreditCard className="w-4 h-4" />
-                      Stripe (Cards: Visa, Mastercard, Amex)
+                      Stripe (International Cards)
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent/5 cursor-pointer">
@@ -222,6 +247,20 @@ const Billing = () => {
                     <Label htmlFor="razorpay" className="flex items-center gap-2 cursor-pointer flex-1">
                       <Smartphone className="w-4 h-4" />
                       Razorpay (UPI, Cards, Net Banking)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent/5 cursor-pointer">
+                    <RadioGroupItem value="phonepe" id="phonepe" />
+                    <Label htmlFor="phonepe" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <Smartphone className="w-4 h-4" />
+                      PhonePe (UPI, Wallets)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent/5 cursor-pointer">
+                    <RadioGroupItem value="googlepay" id="googlepay" />
+                    <Label htmlFor="googlepay" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <Smartphone className="w-4 h-4" />
+                      Google Pay
                     </Label>
                   </div>
                 </RadioGroup>

@@ -241,6 +241,42 @@ export type Database = {
           },
         ]
       }
+      marketing_campaigns: {
+        Row: {
+          campaign_name: string
+          content_type: string
+          created_at: string
+          generated_content: string
+          id: string
+          metadata: Json | null
+          schedule_time: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          campaign_name: string
+          content_type: string
+          created_at?: string
+          generated_content: string
+          id?: string
+          metadata?: Json | null
+          schedule_time: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          campaign_name?: string
+          content_type?: string
+          created_at?: string
+          generated_content?: string
+          id?: string
+          metadata?: Json | null
+          schedule_time?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
