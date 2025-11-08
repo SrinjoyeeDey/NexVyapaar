@@ -22,6 +22,7 @@ const VoiceCommands = () => {
   const [transcript, setTranscript] = useState("");
   const [response, setResponse] = useState("");
   const [recognition, setRecognition] = useState<any>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState(localStorage.getItem('voice_language') || 'en-US');
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -35,7 +36,7 @@ const VoiceCommands = () => {
       const recognitionInstance = new SpeechRecognition();
       recognitionInstance.continuous = false;
       recognitionInstance.interimResults = false;
-      recognitionInstance.lang = 'en-US';
+      recognitionInstance.lang = localStorage.getItem('voice_language') || 'en-US';
 
       recognitionInstance.onresult = (event: any) => {
         const speechResult = event.results[0][0].transcript;
@@ -107,6 +108,18 @@ const VoiceCommands = () => {
     }
   };
 
+  const changeLanguage = (lang: string) => {
+    setSelectedLanguage(lang);
+    localStorage.setItem('voice_language', lang);
+    if (recognition) {
+      recognition.lang = lang;
+    }
+    toast({
+      title: "Language Changed",
+      description: `Voice assistant now uses ${languages.find(l => l.code === lang)?.name}`
+    });
+  };
+
   const toggleListening = () => {
     if (!recognition) {
       toast({
@@ -131,6 +144,19 @@ const VoiceCommands = () => {
       });
     }
   };
+
+  const languages = [
+    { code: 'en-US', name: 'English' },
+    { code: 'hi-IN', name: 'हिंदी (Hindi)' },
+    { code: 'bn-IN', name: 'বাংলা (Bengali)' },
+    { code: 'te-IN', name: 'తెలుగు (Telugu)' },
+    { code: 'mr-IN', name: 'मराठी (Marathi)' },
+    { code: 'ta-IN', name: 'தமிழ் (Tamil)' },
+    { code: 'gu-IN', name: 'ગુજરાતી (Gujarati)' },
+    { code: 'kn-IN', name: 'ಕನ್ನಡ (Kannada)' },
+    { code: 'ml-IN', name: 'മലയാളം (Malayalam)' },
+    { code: 'pa-IN', name: 'ਪੰਜਾਬੀ (Punjabi)' }
+  ];
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -164,6 +190,28 @@ const VoiceCommands = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Language Selector */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Select Language / भाषा चुनें</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              {languages.map(lang => (
+                <Button
+                  key={lang.code}
+                  variant={selectedLanguage === lang.code ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => changeLanguage(lang.code)}
+                  className="text-xs"
+                >
+                  {lang.name}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Voice Control Center */}
         <Card className="mb-8 border-2 border-primary/20">
           <CardHeader className="text-center">

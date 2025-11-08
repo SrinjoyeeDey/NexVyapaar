@@ -20,6 +20,8 @@ import VoiceCommands from "./pages/VoiceCommands";
 import CompetitorAnalysis from "./pages/CompetitorAnalysis";
 import ARPreview from "./pages/ARPreview";
 import Marketing from "./pages/Marketing";
+import Academy from "./pages/Academy";
+import Referrals from "./pages/Referrals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +67,8 @@ const App = () => (
           <Route path="/competitor-analysis" element={<ProtectedLayout><CompetitorAnalysis /></ProtectedLayout>} />
           <Route path="/ar-preview" element={<ProtectedLayout><ARPreview /></ProtectedLayout>} />
           <Route path="/marketing" element={<ProtectedLayout><Marketing /></ProtectedLayout>} />
+          <Route path="/academy" element={<ProtectedLayout><Academy /></ProtectedLayout>} />
+          <Route path="/referrals" element={<ProtectedLayout><Referrals /></ProtectedLayout>} />
           
           {/* 404 */}
           <Route path="*" element={<NotFound />} />

@@ -10,7 +10,9 @@ import {
   Target,
   Camera,
   Megaphone,
-  Crown
+  Crown,
+  GraduationCap,
+  Gift
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
@@ -40,6 +42,8 @@ const toolsItems = [
   { title: "Competitor Analysis", url: "/competitor-analysis", icon: Target },
   { title: "AR Preview", url: "/ar-preview", icon: Camera },
   { title: "Marketing Campaigns", url: "/marketing", icon: Megaphone },
+  { title: "Academy", url: "/academy", icon: GraduationCap },
+  { title: "Referrals", url: "/referrals", icon: Gift },
 ];
 
 const premiumItems = [
