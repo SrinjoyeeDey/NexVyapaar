@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, TrendingUp, BarChart3, LogOut } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Upload, TrendingUp, BarChart3, LogOut, Package } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { toast } from "sonner";
+import { InventoryBreakdown } from "@/components/InventoryBreakdown";
 
 const Analytics = () => {
   const navigate = useNavigate();
@@ -94,8 +96,23 @@ const Analytics = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Upload Section */}
-        <Card className="mb-8">
+        {/* Tabs for Overview and Inventory */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="inventory" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Inventory Breakdown
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-8">
+            {/* Upload Section */}
+            <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5" />
@@ -211,15 +228,22 @@ const Analytics = () => {
           </CardContent>
         </Card>
 
-        {/* Navigation */}
-        <div className="mt-8 flex gap-4">
-          <Button onClick={() => navigate("/dashboard")} variant="outline">
-            Back to Dashboard
-          </Button>
-          <Button onClick={() => navigate("/advisor")} variant="default">
-            AI Advisor →
-          </Button>
-        </div>
+            {/* Navigation */}
+            <div className="mt-8 flex gap-4">
+              <Button onClick={() => navigate("/dashboard")} variant="outline">
+                Back to Dashboard
+              </Button>
+              <Button onClick={() => navigate("/advisor")} variant="default">
+                AI Advisor →
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Inventory Breakdown Tab */}
+          <TabsContent value="inventory">
+            <InventoryBreakdown />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

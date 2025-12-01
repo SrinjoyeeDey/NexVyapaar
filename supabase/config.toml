@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.set-goal]
 verify_jwt = false
+
+[functions.inventory-forecast]
+verify_jwt = false
