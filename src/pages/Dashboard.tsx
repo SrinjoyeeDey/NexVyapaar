@@ -19,7 +19,8 @@ import {
   Lightbulb,
   Zap,
   Award,
-  Target
+  Target,
+  AlertTriangle
 } from "lucide-react";
 import { 
   LineChart, 
@@ -325,15 +326,21 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-primary">
                 <BarChart3 className="w-5 h-5" />
-                Analytics
+                Analytics & Inventory
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Upload CSV files, visualize trends, and get AI-powered forecasts
+                Deep product breakdowns, seasonal trends, and AI inventory forecasts
               </p>
+              <div className="mb-3 p-2 bg-amber-500/10 border border-amber-500/20 rounded text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <span className="text-amber-700 dark:text-amber-400">
+                  Flour burn rate high—check inventory →
+                </span>
+              </div>
               <Button variant="outline" className="w-full gap-2">
-                View Analytics
+                View Inventory
                 <ArrowUpRight className="w-4 h-4" />
               </Button>
             </CardContent>
