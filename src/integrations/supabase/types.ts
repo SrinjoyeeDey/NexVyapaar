@@ -434,34 +434,46 @@ export type Database = {
       }
       sales_data: {
         Row: {
+          burn_rate: number | null
           category: string | null
+          cost_per_unit: number | null
           created_at: string | null
           id: string
           price: number
           product_name: string
           quantity: number
           sale_date: string
+          seasonality_tag: string | null
           user_id: string
+          waste_quantity: number | null
         }
         Insert: {
+          burn_rate?: number | null
           category?: string | null
+          cost_per_unit?: number | null
           created_at?: string | null
           id?: string
           price: number
           product_name: string
           quantity: number
           sale_date?: string
+          seasonality_tag?: string | null
           user_id: string
+          waste_quantity?: number | null
         }
         Update: {
+          burn_rate?: number | null
           category?: string | null
+          cost_per_unit?: number | null
           created_at?: string | null
           id?: string
           price?: number
           product_name?: string
           quantity?: number
           sale_date?: string
+          seasonality_tag?: string | null
           user_id?: string
+          waste_quantity?: number | null
         }
         Relationships: [
           {
