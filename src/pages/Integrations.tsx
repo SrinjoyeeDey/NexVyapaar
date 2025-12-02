@@ -84,9 +84,10 @@ const Integrations = () => {
 
       } catch (error) {
         console.error('QuickBooks OAuth error:', error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to connect to QuickBooks";
         toast({
           title: "Connection Failed",
-          description: error.message || "Failed to connect to QuickBooks",
+          description: errorMessage,
           variant: "destructive"
         });
       }

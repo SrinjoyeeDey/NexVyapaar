@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.inventory-forecast]
 verify_jwt = false
+
+[functions.quickbooks-oauth]
+verify_jwt = false
