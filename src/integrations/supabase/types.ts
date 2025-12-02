@@ -327,6 +327,99 @@ export type Database = {
           },
         ]
       }
+      finished_products: {
+        Row: {
+          category: string | null
+          cost_to_produce: number | null
+          created_at: string | null
+          current_stock: number | null
+          id: string
+          name: string
+          reorder_point: number | null
+          selling_price: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          cost_to_produce?: number | null
+          created_at?: string | null
+          current_stock?: number | null
+          id?: string
+          name: string
+          reorder_point?: number | null
+          selling_price: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          cost_to_produce?: number | null
+          created_at?: string | null
+          current_stock?: number | null
+          id?: string
+          name?: string
+          reorder_point?: number | null
+          selling_price?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      low_stock_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          current_value: number | null
+          id: string
+          is_acknowledged: boolean | null
+          material_id: string | null
+          message: string
+          product_id: string | null
+          threshold_value: number | null
+          user_id: string
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string | null
+          current_value?: number | null
+          id?: string
+          is_acknowledged?: boolean | null
+          material_id?: string | null
+          message: string
+          product_id?: string | null
+          threshold_value?: number | null
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          current_value?: number | null
+          id?: string
+          is_acknowledged?: boolean | null
+          material_id?: string | null
+          message?: string
+          product_id?: string | null
+          threshold_value?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "low_stock_alerts_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "low_stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "finished_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_campaigns: {
         Row: {
           campaign_name: string
@@ -362,6 +455,45 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      product_ingredients: {
+        Row: {
+          created_at: string | null
+          id: string
+          material_id: string
+          product_id: string
+          quantity_required: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          material_id: string
+          product_id: string
+          quantity_required: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          material_id?: string
+          product_id?: string
+          quantity_required?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ingredients_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_ingredients_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "finished_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -404,6 +536,176 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      purchase_order_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          material_id: string | null
+          product_id: string | null
+          purchase_order_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          material_id?: string | null
+          product_id?: string | null
+          purchase_order_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          material_id?: string | null
+          product_id?: string | null
+          purchase_order_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "finished_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          actual_delivery_date: string | null
+          created_at: string | null
+          expected_delivery_date: string | null
+          id: string
+          notes: string | null
+          order_date: string | null
+          po_number: string
+          status: string
+          supplier_id: string
+          total_amount: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_delivery_date?: string | null
+          created_at?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string | null
+          po_number: string
+          status?: string
+          supplier_id: string
+          total_amount: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_delivery_date?: string | null
+          created_at?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string | null
+          po_number?: string
+          status?: string
+          supplier_id?: string
+          total_amount?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_materials: {
+        Row: {
+          burn_rate: number | null
+          category: string | null
+          cost_per_unit: number | null
+          created_at: string | null
+          current_stock: number | null
+          id: string
+          last_ordered_at: string | null
+          name: string
+          optimal_stock_level: number | null
+          reorder_point: number | null
+          seasonality_tag: string | null
+          supplier_id: string | null
+          unit: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          burn_rate?: number | null
+          category?: string | null
+          cost_per_unit?: number | null
+          created_at?: string | null
+          current_stock?: number | null
+          id?: string
+          last_ordered_at?: string | null
+          name: string
+          optimal_stock_level?: number | null
+          reorder_point?: number | null
+          seasonality_tag?: string | null
+          supplier_id?: string | null
+          unit?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          burn_rate?: number | null
+          category?: string | null
+          cost_per_unit?: number | null
+          created_at?: string | null
+          current_stock?: number | null
+          id?: string
+          last_ordered_at?: string | null
+          name?: string
+          optimal_stock_level?: number | null
+          reorder_point?: number | null
+          seasonality_tag?: string | null
+          supplier_id?: string | null
+          unit?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_materials_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       referrals: {
         Row: {
@@ -484,6 +786,112 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      supplier_prices: {
+        Row: {
+          created_at: string | null
+          id: string
+          material_id: string | null
+          minimum_order_quantity: number | null
+          price_per_unit: number
+          product_id: string | null
+          supplier_id: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          material_id?: string | null
+          minimum_order_quantity?: number | null
+          price_per_unit: number
+          product_id?: string | null
+          supplier_id: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          material_id?: string | null
+          minimum_order_quantity?: number | null
+          price_per_unit?: number
+          product_id?: string | null
+          supplier_id?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_prices_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_prices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "finished_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_prices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          contact_person: string | null
+          created_at: string | null
+          delivery_time_days: number | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          payment_terms: string | null
+          phone: string | null
+          rating: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string | null
+          delivery_time_days?: number | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          rating?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string | null
+          delivery_time_days?: number | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          rating?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       transactions: {
         Row: {
