@@ -12,9 +12,11 @@ import {
   MessageCircle,
   MapPin,
   FileSpreadsheet,
-  Lock
+  Lock,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Integrations = () => {
   const navigate = useNavigate();
@@ -38,7 +40,7 @@ const Integrations = () => {
     navigate("/");
   };
 
-  const handleConnect = (service: string) => {
+  const handleConnect = async (service: string) => {
     if (!isPremium && service !== "whatsapp") {
       toast({
         title: "Premium Required",
@@ -49,31 +51,105 @@ const Integrations = () => {
       return;
     }
 
-    // Simulate OAuth connection
-    toast({
-      title: "Connecting...",
-      description: `Opening ${service} authorization...`
-    });
+    // Handle QuickBooks OAuth
+    if (service === "quickbooks") {
+      try {
+        toast({
+          title: "Connecting to QuickBooks...",
+          description: "Opening authorization window"
+        });
 
-    setTimeout(() => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        const { data, error } = await supabase.functions.invoke('quickbooks-oauth', {
+          body: { action: 'init' }
+        });
+
+        if (error) throw error;
+
+        // Open OAuth window
+        const authWindow = window.open(data.authUrl, 'QuickBooks OAuth', 'width=600,height=700');
+        
+        // Listen for OAuth callback
+        const checkWindow = setInterval(() => {
+          if (authWindow?.closed) {
+            clearInterval(checkWindow);
+            // Check connection status
+            checkConnectionStatus('quickbooks');
+          }
+        }, 1000);
+
+      } catch (error) {
+        console.error('QuickBooks OAuth error:', error);
+        toast({
+          title: "Connection Failed",
+          description: error.message || "Failed to connect to QuickBooks",
+          variant: "destructive"
+        });
+      }
+      return;
+    }
+
+    // WhatsApp placeholder - will be implemented later
+    if (service === "whatsapp") {
+      toast({
+        title: "WhatsApp Integration",
+        description: "WhatsApp integration will be configured with API keys later",
+      });
+      return;
+    }
+
+    // Google My Business - placeholder
+    toast({
+      title: "Coming Soon",
+      description: `${service} integration coming soon`,
+    });
+  };
+
+  const checkConnectionStatus = async (service: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('user_integrations')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('provider', service)
+      .single();
+
+    if (!error && data) {
       setConnectedServices(prev => ({ ...prev, [service]: true }));
       toast({
         title: "Connected! 🎉",
         description: `${service} is now integrated`
       });
-    }, 2000);
+    }
   };
 
   const integrations = [
     {
+      id: "quickbooks",
+      name: "QuickBooks",
+      description: "Sync invoices, expenses, and financial data automatically",
+      icon: FileSpreadsheet,
+      premium: true,
+      color: "text-green-600",
+      bgColor: "bg-green-600/10",
+      features: ["Invoice sync", "Expense tracking", "Financial reports", "Auto-reconciliation"]
+    },
+    {
       id: "whatsapp",
       name: "WhatsApp Business",
-      description: "Auto-send promotional messages, order updates, and churn alerts",
+      description: "Auto-send promotional messages, order updates, and churn alerts (Coming Soon)",
       icon: MessageCircle,
       premium: false,
       color: "text-green-500",
       bgColor: "bg-green-500/10",
-      features: ["Bulk messaging", "Templates", "Auto-replies"]
+      features: ["Bulk messaging", "Templates", "Auto-replies", "Low stock alerts"],
+      placeholder: true
     },
     {
       id: "googleMyBusiness",
@@ -84,16 +160,6 @@ const Integrations = () => {
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
       features: ["Review sync", "Auto-responses", "Analytics"]
-    },
-    {
-      id: "quickbooks",
-      name: "QuickBooks",
-      description: "Sync invoices, expenses, and financial data automatically",
-      icon: FileSpreadsheet,
-      premium: true,
-      color: "text-green-600",
-      bgColor: "bg-green-600/10",
-      features: ["Invoice sync", "Expense tracking", "Reports"]
     }
   ];
 
@@ -149,11 +215,12 @@ const Integrations = () => {
           {integrations.map((integration) => {
             const Icon = integration.icon;
             const isConnected = connectedServices[integration.id];
+            const isPlaceholder = (integration as any).placeholder;
 
             return (
               <Card 
                 key={integration.id}
-                className={`border-2 ${isConnected ? "border-green-500/50" : "border-border"}`}
+                className={`border-2 ${isConnected ? "border-green-500/50" : isPlaceholder ? "border-yellow-500/30" : "border-border"}`}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -168,6 +235,12 @@ const Integrations = () => {
                             <Badge variant="secondary" className="gap-1">
                               <Lock className="w-3 h-3" />
                               Premium
+                            </Badge>
+                          )}
+                          {isPlaceholder && (
+                            <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-600">
+                              <AlertCircle className="w-3 h-3" />
+                              Placeholder
                             </Badge>
                           )}
                           {isConnected && (
