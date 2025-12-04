@@ -22,6 +22,8 @@ import ARPreview from "./pages/ARPreview";
 import Marketing from "./pages/Marketing";
 import Academy from "./pages/Academy";
 import Referrals from "./pages/Referrals";
+import Inventory from "./pages/Inventory";
+import Suppliers from "./pages/Suppliers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +71,8 @@ const App = () => (
           <Route path="/marketing" element={<ProtectedLayout><Marketing /></ProtectedLayout>} />
           <Route path="/academy" element={<ProtectedLayout><Academy /></ProtectedLayout>} />
           <Route path="/referrals" element={<ProtectedLayout><Referrals /></ProtectedLayout>} />
+          <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
+          <Route path="/suppliers" element={<ProtectedLayout><Suppliers /></ProtectedLayout>} />
           
           {/* 404 */}
           <Route path="*" element={<NotFound />} />

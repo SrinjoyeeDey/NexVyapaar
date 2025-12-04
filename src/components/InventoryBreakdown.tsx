@@ -230,6 +230,51 @@ export const InventoryBreakdown = () => {
 
   return (
     <div className="space-y-6">
+      {/* How It Works Overview */}
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+        <CardContent className="py-6">
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                How Inventory Intelligence Works
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Our AI analyzes your sales data to provide actionable insights on every product.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">1</div>
+                  <div>
+                    <p className="font-medium">Track Sales & Waste</p>
+                    <p className="text-muted-foreground text-xs">Monitor per-product performance</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">2</div>
+                  <div>
+                    <p className="font-medium">Health Score Analysis</p>
+                    <p className="text-muted-foreground text-xs">AI calculates profit vs. waste ratio</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">3</div>
+                  <div>
+                    <p className="font-medium">Seasonal Forecasting</p>
+                    <p className="text-muted-foreground text-xs">Predict demand based on trends</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <Badge variant="outline" className="text-xs">
+                💡 Click any product row for AI forecast
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
