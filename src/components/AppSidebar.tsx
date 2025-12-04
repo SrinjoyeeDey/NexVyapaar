@@ -12,7 +12,9 @@ import {
   Megaphone,
   Crown,
   GraduationCap,
-  Gift
+  Gift,
+  Package,
+  Truck
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
@@ -31,6 +33,8 @@ import {
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Inventory", url: "/inventory", icon: Package },
+  { title: "Suppliers", url: "/suppliers", icon: Truck },
   { title: "Insights", url: "/insights", icon: Lightbulb },
   { title: "Community", url: "/community", icon: Users },
 ];
