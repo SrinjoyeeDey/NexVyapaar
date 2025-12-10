@@ -46,7 +46,7 @@ const Auth = () => {
     setTimeout(() => {
       if (email && password && businessName) {
         localStorage.setItem("auth_token", "demo_token");
-        toast.success("Account created! Welcome to SmartBizGrow 🎉");
+        toast.success("Account created! Welcome to NexVyapaar 🎉");
         navigate("/dashboard");
       } else {
         toast.error("Please fill all fields");
@@ -65,9 +65,9 @@ const Auth = () => {
             </div>
           </div>
           <h1 className="text-3xl font-display font-bold gradient-text mb-2">
-            SmartBizGrow
+            NexVyapaar
           </h1>
-          <p className="text-muted-foreground">
+        <p className="text-muted-foreground">
             Empowering small businesses with AI-driven insights
           </p>
         </div>
@@ -83,7 +83,7 @@ const Auth = () => {
               <CardHeader>
                 <CardTitle>Welcome back</CardTitle>
                 <CardDescription>
-                  Login to access your business dashboard
+                  Login to access your NexVyapaar dashboard
                 </CardDescription>
               </CardHeader>
               <CardContent>

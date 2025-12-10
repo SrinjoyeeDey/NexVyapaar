@@ -102,12 +102,12 @@ const Referrals = () => {
 
   const shareReferral = async () => {
     const link = `${window.location.origin}/auth?ref=${referralCode}`;
-    const text = `Join SmartBizGrow and get premium features! Use my referral code: ${referralCode}`;
+    const text = `Join NexVyapaar and get premium features! Use my referral code: ${referralCode}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Join SmartBizGrow",
+          title: "Join NexVyapaar",
           text: text,
           url: link
         });

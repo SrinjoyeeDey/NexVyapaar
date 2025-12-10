@@ -154,7 +154,7 @@ const Academy = () => {
               <GraduationCap className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-display font-bold">SmartBizGrow Academy</h1>
+              <h1 className="text-3xl font-display font-bold">NexVyapaar Academy</h1>
               <p className="text-muted-foreground">Free learning platform for business growth</p>
             </div>
           </div>

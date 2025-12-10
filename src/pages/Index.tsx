@@ -68,7 +68,7 @@ const Index = () => {
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-              Turn your data into actionable insights. SmartBizGrow helps local cafes, salons, shops, and service businesses grow with simple, smart, scalable AI tools.
+              Turn your data into actionable insights. NexVyapaar helps local cafes, salons, shops, and service businesses grow with simple, smart, scalable AI tools.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -193,7 +193,7 @@ const Index = () => {
             <p className="mb-2">
               "Every small business is a hero building something amazing. We're here to help you shine." ✨
             </p>
-            <p>© 2024 SmartBizGrow. Empowering local businesses with AI.</p>
+            <p>© 2024 NexVyapaar. Empowering local businesses with AI.</p>
           </div>
         </div>
       </footer>
