@@ -84,7 +84,7 @@ const Analytics = () => {
           <div className="flex items-center gap-3">
             <BarChart3 className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold font-heading">SmartBizGrow</h1>
+              <h1 className="text-2xl font-bold font-heading">NexVyapaar</h1>
               <p className="text-xs text-muted-foreground">Analytics Dashboard</p>
             </div>
           </div>

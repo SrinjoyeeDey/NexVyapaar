@@ -10,7 +10,7 @@ export function NotificationSettings() {
 
   const testNotification = () => {
     sendNotification('Test Notification 🔔', {
-      body: 'This is a test push notification from SmartBizGrow!',
+      body: 'This is a test push notification from NexVyapaar!',
       tag: 'test'
     });
   };

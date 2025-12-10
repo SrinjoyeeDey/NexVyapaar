@@ -90,7 +90,7 @@ const Suppliers = () => {
 
   // Check auth
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('auth_token');
     if (!token) {
       navigate('/auth');
     }

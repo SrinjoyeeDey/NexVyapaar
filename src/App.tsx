@@ -24,6 +24,7 @@ import Academy from "./pages/Academy";
 import Referrals from "./pages/Referrals";
 import Inventory from "./pages/Inventory";
 import Suppliers from "./pages/Suppliers";
+import PurchaseOrders from "./pages/PurchaseOrders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,7 @@ const App = () => (
           <Route path="/referrals" element={<ProtectedLayout><Referrals /></ProtectedLayout>} />
           <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
           <Route path="/suppliers" element={<ProtectedLayout><Suppliers /></ProtectedLayout>} />
+          <Route path="/purchase-orders" element={<ProtectedLayout><PurchaseOrders /></ProtectedLayout>} />
           
           {/* 404 */}
           <Route path="*" element={<NotFound />} />

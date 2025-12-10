@@ -14,7 +14,8 @@ import {
   GraduationCap,
   Gift,
   Package,
-  Truck
+  Truck,
+  ClipboardList
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
@@ -35,6 +36,7 @@ const mainItems = [
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Inventory", url: "/inventory", icon: Package },
   { title: "Suppliers", url: "/suppliers", icon: Truck },
+  { title: "Purchase Orders", url: "/purchase-orders", icon: ClipboardList },
   { title: "Insights", url: "/insights", icon: Lightbulb },
   { title: "Community", url: "/community", icon: Users },
 ];
