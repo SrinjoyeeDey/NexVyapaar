@@ -46,9 +46,12 @@ import {
   CheckCircle,
   XCircle,
   Users,
+  History,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { SupplierPriceHistory } from "@/components/SupplierPriceHistory";
 
 interface Supplier {
   id: string;
@@ -73,6 +76,7 @@ const Suppliers = () => {
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "rating" | "delivery">("name");
+  const [priceHistoryOpen, setPriceHistoryOpen] = useState(false);
 
   // Form state
   const [supplierForm, setSupplierForm] = useState({
@@ -277,7 +281,11 @@ const Suppliers = () => {
             Manage your suppliers, track delivery times, and compare performance
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setPriceHistoryOpen(true)}>
+            <History className="h-4 w-4 mr-2" />
+            Price History
+          </Button>
           <Button
             variant={compareMode ? "default" : "outline"}
             onClick={() => {
@@ -823,6 +831,12 @@ const Suppliers = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Supplier Price History */}
+      <SupplierPriceHistory
+        open={priceHistoryOpen}
+        onOpenChange={setPriceHistoryOpen}
+      />
     </div>
   );
 };

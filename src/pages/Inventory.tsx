@@ -45,9 +45,14 @@ import {
   Edit,
   Trash2,
   CheckCircle2,
+  Upload,
+  History,
+  Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { InventoryCSVImport } from "@/components/InventoryCSVImport";
+import { SupplierPriceHistory } from "@/components/SupplierPriceHistory";
 
 interface RawMaterial {
   id: string;
@@ -92,6 +97,11 @@ const Inventory = () => {
   const [addMaterialOpen, setAddMaterialOpen] = useState(false);
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [priceHistoryOpen, setPriceHistoryOpen] = useState(false);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | undefined>();
+  const [selectedMaterialName, setSelectedMaterialName] = useState<string | undefined>();
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
   // Form states
   const [materialForm, setMaterialForm] = useState({
@@ -122,6 +132,49 @@ const Inventory = () => {
       navigate('/auth');
     }
   }, [navigate]);
+
+  // Real-time subscriptions for inventory updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('inventory-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'raw_materials' },
+        (payload) => {
+          console.log('Raw materials change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+          if (payload.eventType === 'UPDATE') {
+            toast.info('Stock level updated in real-time');
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'finished_products' },
+        (payload) => {
+          console.log('Finished products change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['finished-products'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'low_stock_alerts' },
+        (payload) => {
+          console.log('New low stock alert:', payload);
+          queryClient.invalidateQueries({ queryKey: ['low-stock-alerts'] });
+          toast.warning('New low stock alert!', {
+            description: (payload.new as any)?.message
+          });
+        }
+      )
+      .subscribe((status) => {
+        setIsRealtimeConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Fetch raw materials
   const { data: rawMaterials, isLoading: loadingMaterials } = useQuery({
@@ -370,12 +423,30 @@ const Inventory = () => {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Package className="h-8 w-8 text-primary" />
             Inventory Dashboard
+            {isRealtimeConnected && (
+              <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
+                <Wifi className="h-3 w-3 mr-1" />
+                Live
+              </Badge>
+            )}
           </h1>
           <p className="text-muted-foreground mt-1">
             Real-time stock levels, alerts, and AI-powered reorder recommendations
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setCsvImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
+          </Button>
+          <Button variant="outline" onClick={() => {
+            setSelectedMaterialId(undefined);
+            setSelectedMaterialName(undefined);
+            setPriceHistoryOpen(true);
+          }}>
+            <History className="h-4 w-4 mr-2" />
+            Price History
+          </Button>
           <Button variant="outline" onClick={() => queryClient.invalidateQueries()}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -936,6 +1007,21 @@ const Inventory = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* CSV Import Modal */}
+      <InventoryCSVImport
+        open={csvImportOpen}
+        onOpenChange={setCsvImportOpen}
+        importType="both"
+      />
+
+      {/* Supplier Price History */}
+      <SupplierPriceHistory
+        open={priceHistoryOpen}
+        onOpenChange={setPriceHistoryOpen}
+        materialId={selectedMaterialId}
+        materialName={selectedMaterialName}
+      />
     </div>
   );
 };

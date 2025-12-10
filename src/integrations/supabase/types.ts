@@ -787,6 +787,71 @@ export type Database = {
           },
         ]
       }
+      supplier_price_history: {
+        Row: {
+          id: string
+          material_id: string | null
+          notes: string | null
+          price_per_unit: number
+          product_id: string | null
+          recorded_at: string
+          supplier_id: string
+          supplier_price_id: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          material_id?: string | null
+          notes?: string | null
+          price_per_unit: number
+          product_id?: string | null
+          recorded_at?: string
+          supplier_id: string
+          supplier_price_id?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          material_id?: string | null
+          notes?: string | null
+          price_per_unit?: number
+          product_id?: string | null
+          recorded_at?: string
+          supplier_id?: string
+          supplier_price_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_price_history_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "finished_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_price_history_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_price_history_supplier_price_id_fkey"
+            columns: ["supplier_price_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_prices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_prices: {
         Row: {
           created_at: string | null
