@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { FeatureCard } from "@/components/FeatureCard";
+import { VerifiedVendorBadge } from "@/components/vendor/VerifiedVendorBadge";
+import { useVendor } from "@/contexts/VendorContext";
 import { 
   BarChart3, 
   Brain, 
@@ -9,11 +11,13 @@ import {
   Sparkles,
   ArrowRight,
   CheckCircle2,
-  Lightbulb
+  Lightbulb,
+  Store
 } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { isVerifiedVendor } = useVendor();
 
   const features = [
     {
@@ -71,7 +75,7 @@ const Index = () => {
               Turn your data into actionable insights. NexVyapaar helps local cafes, salons, shops, and service businesses grow with simple, smart, scalable AI tools.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
               <Button 
                 size="lg"
                 className="btn-hero pulse-glow gap-2 text-lg px-8"
@@ -89,6 +93,25 @@ const Index = () => {
                 View Demo
                 <TrendingUp className="w-5 h-5" />
               </Button>
+            </div>
+
+            {/* Register Business Button */}
+            <div className="mb-8">
+              {isVerifiedVendor ? (
+                <div className="flex items-center justify-center gap-2">
+                  <VerifiedVendorBadge size="lg" />
+                </div>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="gap-2"
+                  onClick={() => navigate("/vendor-onboarding")}
+                >
+                  <Store className="w-5 h-5" />
+                  Register Your Business
+                </Button>
+              )}
             </div>
 
             <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
