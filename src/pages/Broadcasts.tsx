@@ -87,7 +87,8 @@ const Broadcasts = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate('/auth');
+        // User not logged in - show empty state instead of redirecting
+        setIsLoading(false);
         return;
       }
 

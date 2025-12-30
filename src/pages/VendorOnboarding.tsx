@@ -19,7 +19,7 @@ const STEPS = [
 
 const VendorOnboarding = () => {
   const navigate = useNavigate();
-  const { updateVendorData } = useVendor();
+  const { updateVendorData, saveVendorToDatabase } = useVendor();
   const [currentStep, setCurrentStep] = useState(1);
   const [stepValidation, setStepValidation] = useState<Record<number, boolean>>({
     1: false,
@@ -49,25 +49,36 @@ const VendorOnboarding = () => {
   const handleComplete = async () => {
     setIsCompleting(true);
     
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    // Update vendor data with registration status
     updateVendorData({
       isRegistered: true,
       registeredAt: new Date().toISOString(),
     });
 
-    setShowConfetti(true);
+    // Wait a bit for state to update, then save to database
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    toast({
-      title: '🎉 Registration Complete!',
-      description: 'Welcome to NexVyapaar! Your vendor account is now active.',
-    });
+    const saved = await saveVendorToDatabase();
+    
+    if (saved) {
+      setShowConfetti(true);
+      
+      toast({
+        title: '🎉 Registration Complete!',
+        description: 'Welcome to NexVyapaar! Your vendor account is now active.',
+      });
 
-    // Redirect after confetti
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 3000);
+      // Redirect after confetti
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 3000);
+    } else {
+      toast({
+        title: 'Registration Issue',
+        description: 'Data saved locally but may not persist. Please log in to save permanently.',
+        variant: 'destructive',
+      });
+    }
 
     setIsCompleting(false);
   };

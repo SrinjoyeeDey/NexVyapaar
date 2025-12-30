@@ -72,7 +72,7 @@ const CustomerConsents = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate('/auth');
+        setIsLoading(false);
         return;
       }
 
