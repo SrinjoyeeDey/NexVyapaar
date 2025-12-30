@@ -6,6 +6,7 @@ import GoalSetterModal from "@/components/GoalSetterModal";
 import SustainabilityWidget from "@/components/SustainabilityWidget";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import BroadcastComposer from "@/components/broadcast/BroadcastComposer";
+import { NotificationBell } from "@/components/NotificationBell";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -87,6 +88,7 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Button 
               variant="default" 
               size="sm"
