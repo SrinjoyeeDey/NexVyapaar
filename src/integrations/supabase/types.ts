@@ -88,6 +88,96 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcasts: {
+        Row: {
+          audience_type: string | null
+          channels: string[]
+          clicked_count: number | null
+          content: string
+          created_at: string
+          delivered_count: number | null
+          estimated_cost: number | null
+          id: string
+          media_urls: string[] | null
+          message_type: string
+          opened_count: number | null
+          recipients_count: number | null
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audience_type?: string | null
+          channels?: string[]
+          clicked_count?: number | null
+          content: string
+          created_at?: string
+          delivered_count?: number | null
+          estimated_cost?: number | null
+          id?: string
+          media_urls?: string[] | null
+          message_type?: string
+          opened_count?: number | null
+          recipients_count?: number | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audience_type?: string | null
+          channels?: string[]
+          clicked_count?: number | null
+          content?: string
+          created_at?: string
+          delivered_count?: number | null
+          estimated_cost?: number | null
+          id?: string
+          media_urls?: string[] | null
+          message_type?: string
+          opened_count?: number | null
+          recipients_count?: number | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      civic_connections: {
+        Row: {
+          civic_id: string
+          connected_at: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          civic_id: string
+          connected_at?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          civic_id?: string
+          connected_at?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       community_comments: {
         Row: {
           content: string
@@ -283,6 +373,63 @@ export type Database = {
           title?: string
           updated_at?: string | null
           video_url?: string | null
+        }
+        Relationships: []
+      }
+      customer_consents: {
+        Row: {
+          announcements: boolean | null
+          civic_verified: boolean | null
+          consent_status: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          engagement_rate: number | null
+          id: string
+          last_contacted_at: string | null
+          marketing_offers: boolean | null
+          messages_received: number | null
+          product_updates: boolean | null
+          sms_notifications: boolean | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          announcements?: boolean | null
+          civic_verified?: boolean | null
+          consent_status?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          engagement_rate?: number | null
+          id?: string
+          last_contacted_at?: string | null
+          marketing_offers?: boolean | null
+          messages_received?: number | null
+          product_updates?: boolean | null
+          sms_notifications?: boolean | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          announcements?: boolean | null
+          civic_verified?: boolean | null
+          consent_status?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          engagement_rate?: number | null
+          id?: string
+          last_contacted_at?: string | null
+          marketing_offers?: boolean | null
+          messages_received?: number | null
+          product_updates?: boolean | null
+          sms_notifications?: boolean | null
+          updated_at?: string
+          vendor_id?: string
         }
         Relationships: []
       }
@@ -1081,6 +1228,75 @@ export type Database = {
           referred_user_id?: string
           referrer_id?: string
           reward_claimed?: boolean | null
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          aadhaar_verified: boolean | null
+          address_line1: string | null
+          address_line2: string | null
+          blockchain_hash: string | null
+          business_category: string
+          business_name: string
+          city: string | null
+          created_at: string
+          gst_number: string | null
+          id: string
+          is_registered: boolean | null
+          latitude: number | null
+          longitude: number | null
+          pin_code: string | null
+          registered_at: string | null
+          state: string | null
+          store_description: string | null
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          aadhaar_verified?: boolean | null
+          address_line1?: string | null
+          address_line2?: string | null
+          blockchain_hash?: string | null
+          business_category: string
+          business_name: string
+          city?: string | null
+          created_at?: string
+          gst_number?: string | null
+          id?: string
+          is_registered?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          pin_code?: string | null
+          registered_at?: string | null
+          state?: string | null
+          store_description?: string | null
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          aadhaar_verified?: boolean | null
+          address_line1?: string | null
+          address_line2?: string | null
+          blockchain_hash?: string | null
+          business_category?: string
+          business_name?: string
+          city?: string | null
+          created_at?: string
+          gst_number?: string | null
+          id?: string
+          is_registered?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          pin_code?: string | null
+          registered_at?: string | null
+          state?: string | null
+          store_description?: string | null
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
         }
         Relationships: []
       }
