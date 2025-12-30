@@ -28,6 +28,9 @@ import Inventory from "./pages/Inventory";
 import Suppliers from "./pages/Suppliers";
 import PurchaseOrders from "./pages/PurchaseOrders";
 import VendorOnboarding from "./pages/VendorOnboarding";
+import CivicIntegration from "./pages/CivicIntegration";
+import Broadcasts from "./pages/Broadcasts";
+import CustomerConsents from "./pages/CustomerConsents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +84,9 @@ const App = () => (
             <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
             <Route path="/suppliers" element={<ProtectedLayout><Suppliers /></ProtectedLayout>} />
             <Route path="/purchase-orders" element={<ProtectedLayout><PurchaseOrders /></ProtectedLayout>} />
+            <Route path="/broadcasts" element={<ProtectedLayout><Broadcasts /></ProtectedLayout>} />
+            <Route path="/customer-consents" element={<ProtectedLayout><CustomerConsents /></ProtectedLayout>} />
+            <Route path="/settings/civic-integration" element={<ProtectedLayout><CivicIntegration /></ProtectedLayout>} />
             
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

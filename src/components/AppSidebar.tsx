@@ -15,7 +15,10 @@ import {
   Gift,
   Package,
   Truck,
-  ClipboardList
+  ClipboardList,
+  Radio,
+  UserCheck,
+  Shield
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
@@ -37,6 +40,7 @@ const mainItems = [
   { title: "Inventory", url: "/inventory", icon: Package },
   { title: "Suppliers", url: "/suppliers", icon: Truck },
   { title: "Purchase Orders", url: "/purchase-orders", icon: ClipboardList },
+  { title: "Broadcasts", url: "/broadcasts", icon: Radio },
   { title: "Insights", url: "/insights", icon: Lightbulb },
   { title: "Community", url: "/community", icon: Users },
 ];
@@ -44,6 +48,8 @@ const mainItems = [
 const toolsItems = [
   { title: "Integrations", url: "/integrations", icon: Plug },
   { title: "Transactions", url: "/transactions", icon: Receipt },
+  { title: "Customer Consents", url: "/customer-consents", icon: UserCheck },
+  { title: "Civic Integration", url: "/settings/civic-integration", icon: Shield },
   { title: "Voice Control", url: "/voice", icon: Mic },
   { title: "Competitor Analysis", url: "/competitor-analysis", icon: Target },
   { title: "AR Preview", url: "/ar-preview", icon: Camera },
