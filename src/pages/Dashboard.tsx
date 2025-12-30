@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import GoalSetterModal from "@/components/GoalSetterModal";
 import SustainabilityWidget from "@/components/SustainabilityWidget";
 import { NotificationSettings } from "@/components/NotificationSettings";
+import BroadcastComposer from "@/components/broadcast/BroadcastComposer";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -20,7 +21,8 @@ import {
   Zap,
   Award,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  Radio
 } from "lucide-react";
 import { 
   LineChart, 
@@ -56,6 +58,7 @@ const categoryData = [
 const Dashboard = () => {
   const navigate = useNavigate();
   const [goalModalOpen, setGoalModalOpen] = useState(false);
+  const [showBroadcastComposer, setShowBroadcastComposer] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -83,17 +86,34 @@ const Dashboard = () => {
               <p className="text-xs text-muted-foreground">My Awesome Cafe</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={handleLogout}
-            className="gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={() => setShowBroadcastComposer(true)}
+              className="gap-2"
+            >
+              <Radio className="w-4 h-4" />
+              Broadcast Message
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleLogout}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
+
+      {/* Broadcast Composer Modal */}
+      <BroadcastComposer 
+        open={showBroadcastComposer} 
+        onOpenChange={setShowBroadcastComposer}
+      />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
