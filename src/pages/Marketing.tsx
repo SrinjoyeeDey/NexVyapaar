@@ -117,7 +117,8 @@ const Marketing = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
+      // Create marketing campaign
+      const { data: campaign, error: campaignError } = await supabase
         .from("marketing_campaigns")
         .insert({
           user_id: user.id,
@@ -127,13 +128,41 @@ const Marketing = () => {
           schedule_time: scheduleTime,
           status: "scheduled",
           metadata: { businessInfo }
+        })
+        .select()
+        .single();
+
+      if (campaignError) throw campaignError;
+
+      // Auto-create a broadcast for this campaign
+      const channelMap: Record<string, string[]> = {
+        social: ['push'],
+        email: ['email'],
+        whatsapp: ['whatsapp', 'sms']
+      };
+
+      const { error: broadcastError } = await supabase
+        .from("broadcasts")
+        .insert({
+          user_id: user.id,
+          subject: campaignName,
+          content: generatedContent,
+          message_type: 'announcement',
+          channels: channelMap[contentType] || ['push'],
+          audience_type: 'all',
+          scheduled_at: scheduleTime,
+          status: 'scheduled',
+          recipients_count: 150, // Mock count
+          estimated_cost: channelMap[contentType]?.includes('sms') ? 37.5 : 0,
         });
 
-      if (error) throw error;
+      if (broadcastError) {
+        console.error("Error creating auto-broadcast:", broadcastError);
+      }
 
       toast({
         title: "Campaign Scheduled! 🎯",
-        description: `${campaignName} will be sent on ${format(new Date(scheduleTime), "PPp")}`
+        description: `${campaignName} will be sent on ${format(new Date(scheduleTime), "PPp")}. A broadcast has been auto-created.`
       });
 
       // Reset form

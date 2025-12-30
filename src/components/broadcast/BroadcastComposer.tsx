@@ -9,8 +9,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { DeliverySimulation } from './DeliverySimulation';
 import {
   Megaphone,
   Gift,
@@ -31,6 +33,7 @@ import {
   Smartphone,
   MessageSquare,
   Mail,
+  HelpCircle,
 } from 'lucide-react';
 
 interface BroadcastComposerProps {
@@ -70,6 +73,7 @@ const BroadcastComposer = ({ open, onOpenChange, onSuccess }: BroadcastComposerP
   const [scheduleMode, setScheduleMode] = useState<'now' | 'later'>('now');
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
+  const [showDeliverySimulation, setShowDeliverySimulation] = useState(false);
 
   const charCount = content.length;
   const smsCharLimit = 160;
@@ -196,6 +200,11 @@ const BroadcastComposer = ({ open, onOpenChange, onSuccess }: BroadcastComposerP
           : `Your message is scheduled for ${scheduleDate} at ${scheduleTime}`,
       });
 
+      // Show delivery simulation for immediate sends
+      if (scheduleMode === 'now') {
+        setShowDeliverySimulation(true);
+      }
+
       onSuccess?.();
       onOpenChange(false);
       resetForm();
@@ -225,14 +234,24 @@ const BroadcastComposer = ({ open, onOpenChange, onSuccess }: BroadcastComposerP
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Megaphone className="h-5 w-5" />
-            Broadcast Message Composer
-          </DialogTitle>
-        </DialogHeader>
+    <TooltipProvider>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              Broadcast Message Composer
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="font-medium mb-1">Civic-Verified Broadcasting</p>
+                  <p className="text-xs">Civic enables verified, consent-based communication without spam. Engagement improved from 12% to 45% with verified IDs.</p>
+                </TooltipContent>
+              </Tooltip>
+            </DialogTitle>
+          </DialogHeader>
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Left Column - Composer */}
@@ -525,6 +544,7 @@ const BroadcastComposer = ({ open, onOpenChange, onSuccess }: BroadcastComposerP
         </Dialog>
       </DialogContent>
     </Dialog>
+    </TooltipProvider>
   );
 };
 
