@@ -85,7 +85,9 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
     recognitionRef.current = new SpeechRecognition();
 
     const recognition = recognitionRef.current;
-    recognition.lang = getSpeechCode();
+    const speechCode = getSpeechCode();
+    console.log('Starting speech recognition with language:', speechCode);
+    recognition.lang = speechCode;
     recognition.continuous = options.continuous ?? false;
     recognition.interimResults = options.interimResults ?? true;
     recognition.maxAlternatives = options.maxAlternatives ?? 3;
