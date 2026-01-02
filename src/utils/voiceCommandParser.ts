@@ -15,6 +15,15 @@ export interface ProductSuggestion {
   price: number;
 }
 
+interface CommandPatternSet {
+  sold: RegExp[];
+  add: RegExp[];
+  expired: RegExp[];
+  payment: RegExp[];
+  return: RegExp[];
+  query?: RegExp[];
+}
+
 const commonProducts: ProductSuggestion[] = [
   { name: 'Parle-G Biscuits', price: 10 },
   { name: 'Britannia Biscuits', price: 12 },
@@ -56,7 +65,7 @@ const commandPatterns = {
     query: [
       /(?:show|what(?:'s)?|how\s+much)\s+(.+)/i
     ]
-  },
+  } as CommandPatternSet,
   hi: {
     sold: [
       /(\d+)\s+(.+?)\s+(?:बेचा|बेचे|बिका)/i,
@@ -75,7 +84,7 @@ const commandPatterns = {
     return: [
       /(.+?)\s+ने\s+(\d+)\s+(.+?)\s+वापस/i
     ]
-  },
+  } as CommandPatternSet,
   bn: {
     sold: [
       /(\d+)\s*(?:টা|টি)?\s+(.+?)\s+(?:বিক্রি|বেচেছি|বেচা)/i,
@@ -90,36 +99,37 @@ const commandPatterns = {
     ],
     payment: [
       /(.+?)\s+থেকে\s+(\d+)\s*(?:টাকা|₹)?\s+পেয়েছি/i
-    ]
-  },
+    ],
+    return: []
+  } as CommandPatternSet,
   mr: {
     sold: [/(\d+)\s+(.+?)\s+(?:विकले|विकला)/i],
     add: [/(\d+)\s+(.+?)\s+(?:जोडा|add)/i],
     expired: [/(\d+)\s+(.+?)\s+खराब/i],
     payment: [/(.+?)\s+कडून\s+(\d+)/i],
     return: []
-  },
+  } as CommandPatternSet,
   ta: {
     sold: [/(\d+)\s+(.+?)\s+(?:விற்றேன்|விற்றது)/i],
     add: [/(\d+)\s+(.+?)\s+(?:சேர்க்கவும்|add)/i],
     expired: [/(\d+)\s+(.+?)\s+காலாவதி/i],
     payment: [/(.+?)\s+இடமிருந்து\s+(\d+)/i],
     return: []
-  },
+  } as CommandPatternSet,
   te: {
     sold: [/(\d+)\s+(.+?)\s+(?:అమ్మాను|అమ్మింది)/i],
     add: [/(\d+)\s+(.+?)\s+(?:జోడించండి|add)/i],
     expired: [/(\d+)\s+(.+?)\s+ముగిసింది/i],
     payment: [],
     return: []
-  },
+  } as CommandPatternSet,
   gu: {
     sold: [/(\d+)\s+(.+?)\s+(?:વેચ્યા|વેચ્યું)/i],
     add: [/(\d+)\s+(.+?)\s+(?:ઉમેરો|add)/i],
     expired: [/(\d+)\s+(.+?)\s+સમાપ્ત/i],
     payment: [],
     return: []
-  }
+  } as CommandPatternSet
 };
 
 // Convert local script numbers to Arabic numerals

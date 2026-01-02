@@ -31,7 +31,11 @@ import VendorOnboarding from "./pages/VendorOnboarding";
 import CivicIntegration from "./pages/CivicIntegration";
 import Broadcasts from "./pages/Broadcasts";
 import CustomerConsents from "./pages/CustomerConsents";
+import VoiceHistory from "./pages/VoiceHistory";
+import VoiceSettings from "./pages/VoiceSettings";
 import NotFound from "./pages/NotFound";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { FloatingVoiceButton } from "@/components/voice/FloatingVoiceButton";
 
 const queryClient = new QueryClient();
 
@@ -55,44 +59,49 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <VendorProvider>
-        <Toaster />
-        <Sonner />
-        <RealtimeNotifications />
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/vendor-onboarding" element={<VendorOnboarding />} />
-            
-            {/* Protected routes with sidebar */}
-            <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
-            <Route path="/analytics" element={<ProtectedLayout><Analytics /></ProtectedLayout>} />
-            <Route path="/advisor" element={<ProtectedLayout><Advisor /></ProtectedLayout>} />
-            <Route path="/community" element={<ProtectedLayout><Community /></ProtectedLayout>} />
-            <Route path="/insights" element={<ProtectedLayout><Insights /></ProtectedLayout>} />
-            <Route path="/integrations" element={<ProtectedLayout><Integrations /></ProtectedLayout>} />
-            <Route path="/billing" element={<ProtectedLayout><Billing /></ProtectedLayout>} />
-            <Route path="/transactions" element={<ProtectedLayout><Transactions /></ProtectedLayout>} />
-            <Route path="/voice" element={<ProtectedLayout><VoiceCommands /></ProtectedLayout>} />
-            <Route path="/competitor-analysis" element={<ProtectedLayout><CompetitorAnalysis /></ProtectedLayout>} />
-            <Route path="/ar-preview" element={<ProtectedLayout><ARPreview /></ProtectedLayout>} />
-            <Route path="/marketing" element={<ProtectedLayout><Marketing /></ProtectedLayout>} />
-            <Route path="/academy" element={<ProtectedLayout><Academy /></ProtectedLayout>} />
-            <Route path="/referrals" element={<ProtectedLayout><Referrals /></ProtectedLayout>} />
-            <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
-            <Route path="/suppliers" element={<ProtectedLayout><Suppliers /></ProtectedLayout>} />
-            <Route path="/purchase-orders" element={<ProtectedLayout><PurchaseOrders /></ProtectedLayout>} />
-            <Route path="/broadcasts" element={<ProtectedLayout><Broadcasts /></ProtectedLayout>} />
-            <Route path="/customer-consents" element={<ProtectedLayout><CustomerConsents /></ProtectedLayout>} />
-            <Route path="/settings/civic-integration" element={<ProtectedLayout><CivicIntegration /></ProtectedLayout>} />
-            
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </VendorProvider>
+      <LanguageProvider>
+        <VendorProvider>
+          <Toaster />
+          <Sonner />
+          <RealtimeNotifications />
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/vendor-onboarding" element={<VendorOnboarding />} />
+              
+              {/* Protected routes with sidebar */}
+              <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
+              <Route path="/analytics" element={<ProtectedLayout><Analytics /></ProtectedLayout>} />
+              <Route path="/advisor" element={<ProtectedLayout><Advisor /></ProtectedLayout>} />
+              <Route path="/community" element={<ProtectedLayout><Community /></ProtectedLayout>} />
+              <Route path="/insights" element={<ProtectedLayout><Insights /></ProtectedLayout>} />
+              <Route path="/integrations" element={<ProtectedLayout><Integrations /></ProtectedLayout>} />
+              <Route path="/billing" element={<ProtectedLayout><Billing /></ProtectedLayout>} />
+              <Route path="/transactions" element={<ProtectedLayout><Transactions /></ProtectedLayout>} />
+              <Route path="/voice" element={<ProtectedLayout><VoiceCommands /></ProtectedLayout>} />
+              <Route path="/voice-history" element={<ProtectedLayout><VoiceHistory /></ProtectedLayout>} />
+              <Route path="/settings/voice" element={<ProtectedLayout><VoiceSettings /></ProtectedLayout>} />
+              <Route path="/competitor-analysis" element={<ProtectedLayout><CompetitorAnalysis /></ProtectedLayout>} />
+              <Route path="/ar-preview" element={<ProtectedLayout><ARPreview /></ProtectedLayout>} />
+              <Route path="/marketing" element={<ProtectedLayout><Marketing /></ProtectedLayout>} />
+              <Route path="/academy" element={<ProtectedLayout><Academy /></ProtectedLayout>} />
+              <Route path="/referrals" element={<ProtectedLayout><Referrals /></ProtectedLayout>} />
+              <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
+              <Route path="/suppliers" element={<ProtectedLayout><Suppliers /></ProtectedLayout>} />
+              <Route path="/purchase-orders" element={<ProtectedLayout><PurchaseOrders /></ProtectedLayout>} />
+              <Route path="/broadcasts" element={<ProtectedLayout><Broadcasts /></ProtectedLayout>} />
+              <Route path="/customer-consents" element={<ProtectedLayout><CustomerConsents /></ProtectedLayout>} />
+              <Route path="/settings/civic-integration" element={<ProtectedLayout><CivicIntegration /></ProtectedLayout>} />
+              
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <FloatingVoiceButton />
+          </BrowserRouter>
+        </VendorProvider>
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
