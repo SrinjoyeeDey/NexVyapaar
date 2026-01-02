@@ -51,6 +51,8 @@ const toolsItems = [
   { title: "Customer Consents", url: "/customer-consents", icon: UserCheck },
   { title: "Civic Integration", url: "/settings/civic-integration", icon: Shield },
   { title: "Voice Control", url: "/voice", icon: Mic },
+  { title: "Voice History", url: "/voice-history", icon: Mic },
+  { title: "Voice Settings", url: "/settings/voice", icon: Mic },
   { title: "Competitor Analysis", url: "/competitor-analysis", icon: Target },
   { title: "AR Preview", url: "/ar-preview", icon: Camera },
   { title: "Marketing Campaigns", url: "/marketing", icon: Megaphone },

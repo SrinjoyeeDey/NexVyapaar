@@ -3,48 +3,68 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Mic, Square, Check, Edit, X, Loader2, HelpCircle } from 'lucide-react';
+import { Mic, Square, Check, Edit, X, Loader2, HelpCircle, Zap } from 'lucide-react';
 import { WaveformVisualizer } from './WaveformVisualizer';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { parseVoiceCommand, ParsedCommand, ProductSuggestion } from '@/utils/voiceCommandParser';
+import { parseVoiceCommand, ParsedCommand } from '@/utils/voiceCommandParser';
 import { toast } from 'sonner';
 
 interface VoiceInputModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCommandConfirmed: (command: ParsedCommand) => void;
+  demoMode?: boolean;
 }
 
 type ModalState = 'listening' | 'processing' | 'result' | 'clarify';
 
-export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed }: VoiceInputModalProps) {
+// Pre-recorded demo samples for smooth judge presentations
+const demoSamples = [
+  { text: "Sold 10 Parle-G biscuits", language: 'en' },
+  { text: "Added 20 Maggi packets to inventory", language: 'en' },
+  { text: "Received 500 rupees from Raj Kumar", language: 'en' },
+  { text: "5 milk packets expired", language: 'en' },
+  { text: "10 पार्ले-जी बिस्किट बेचे", language: 'hi' },
+  { text: "20 मैगी स्टॉक में जोड़ें", language: 'hi' },
+  { text: "১০টি Parle-G বিস্কুট বিক্রি করেছি", language: 'bn' },
+];
+
+export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed, demoMode = false }: VoiceInputModalProps) {
   const { t, language } = useLanguage();
   const [modalState, setModalState] = useState<ModalState>('listening');
   const [recordingTime, setRecordingTime] = useState(0);
   const [parsedCommand, setParsedCommand] = useState<ParsedCommand | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [demoTranscript, setDemoTranscript] = useState('');
+  const [demoSampleIndex, setDemoSampleIndex] = useState(0);
+
+  const processTranscript = useCallback((text: string, lang: string) => {
+    setModalState('processing');
+    
+    // In demo mode, process instantly; otherwise simulate delay
+    const delay = demoMode ? 500 : 1500;
+    
+    setTimeout(() => {
+      const parsed = parseVoiceCommand(text, lang);
+      setParsedCommand(parsed);
+      
+      if (parsed.type === 'unknown') {
+        toast.error(t.voice.commandNotUnderstood);
+        setModalState('listening');
+      } else if (parsed.suggestions && parsed.suggestions.length > 0) {
+        setModalState('clarify');
+      } else {
+        setModalState('result');
+      }
+    }, delay);
+  }, [demoMode, t]);
 
   const handleResult = useCallback((result: { transcript: string; isFinal: boolean }) => {
     if (result.isFinal && result.transcript.trim()) {
-      setModalState('processing');
-      
-      // Simulate NLP processing delay
-      setTimeout(() => {
-        const parsed = parseVoiceCommand(result.transcript, language);
-        setParsedCommand(parsed);
-        
-        if (parsed.type === 'unknown') {
-          toast.error(t.voice.commandNotUnderstood);
-          setModalState('listening');
-        } else if (parsed.suggestions && parsed.suggestions.length > 0) {
-          setModalState('clarify');
-        } else {
-          setModalState('result');
-        }
-      }, 1500);
+      processTranscript(result.transcript, language);
     }
-  }, [language, t]);
+  }, [language, processTranscript]);
 
   const {
     isListening,
@@ -74,7 +94,7 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed }: VoiceIn
 
   // Auto-start listening when modal opens
   useEffect(() => {
-    if (isOpen && modalState === 'listening') {
+    if (isOpen && modalState === 'listening' && !demoMode) {
       startListening();
       setRecordingTime(0);
     }
@@ -83,7 +103,30 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed }: VoiceIn
         stopListening();
       }
     };
-  }, [isOpen]);
+  }, [isOpen, demoMode]);
+
+  // Demo mode: simulate typing effect
+  const runDemoSample = useCallback(() => {
+    const sample = demoSamples[demoSampleIndex % demoSamples.length];
+    let charIndex = 0;
+    setDemoTranscript('');
+    setRecordingTime(0);
+    
+    const typeInterval = setInterval(() => {
+      if (charIndex <= sample.text.length) {
+        setDemoTranscript(sample.text.slice(0, charIndex));
+        charIndex++;
+        setRecordingTime(Math.floor(charIndex / 10));
+      } else {
+        clearInterval(typeInterval);
+        setTimeout(() => {
+          processTranscript(sample.text, sample.language);
+        }, 300);
+      }
+    }, 50);
+
+    return () => clearInterval(typeInterval);
+  }, [demoSampleIndex, processTranscript]);
 
   const handleClose = () => {
     stopListening();
@@ -92,6 +135,7 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed }: VoiceIn
     setParsedCommand(null);
     setSelectedProduct('');
     setRecordingTime(0);
+    setDemoTranscript('');
     onClose();
   };
 
@@ -131,8 +175,23 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed }: VoiceIn
     setParsedCommand(null);
     setSelectedProduct('');
     setRecordingTime(0);
+    setDemoTranscript('');
     setModalState('listening');
-    startListening();
+    if (demoMode) {
+      setDemoSampleIndex(prev => prev + 1);
+    } else {
+      startListening();
+    }
+  };
+
+  const handleDemoStart = () => {
+    runDemoSample();
+  };
+
+  const handleNextDemoSample = () => {
+    setDemoSampleIndex(prev => prev + 1);
+    setDemoTranscript('');
+    setModalState('listening');
   };
 
   const formatTime = (seconds: number) => {
@@ -149,40 +208,74 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed }: VoiceIn
           {modalState === 'listening' && (
             <div className="text-center space-y-6">
               <div className="flex items-center justify-center gap-2 text-primary">
-                <Mic className="h-6 w-6 animate-pulse" />
-                <span className="text-xl font-semibold">{t.voice.listening}</span>
+                {demoMode ? (
+                  <>
+                    <Zap className="h-6 w-6 text-amber-500" />
+                    <span className="text-xl font-semibold">Demo Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-6 w-6 animate-pulse" />
+                    <span className="text-xl font-semibold">{t.voice.listening}</span>
+                  </>
+                )}
               </div>
 
               <WaveformVisualizer 
-                audioLevel={audioLevel} 
-                isActive={isListening} 
+                audioLevel={demoMode ? (demoTranscript.length % 10) * 0.1 : audioLevel} 
+                isActive={isListening || demoTranscript.length > 0} 
               />
 
               <div className="text-sm text-muted-foreground">
                 {formatTime(recordingTime)}
               </div>
 
-              {(transcript || interimTranscript) && (
+              {(transcript || interimTranscript || demoTranscript) && (
                 <div className="bg-muted/50 rounded-lg p-4 min-h-[60px]">
                   <p className="text-foreground">
-                    {transcript}
-                    <span className="text-muted-foreground">{interimTranscript}</span>
+                    {demoMode ? demoTranscript : (
+                      <>
+                        {transcript}
+                        <span className="text-muted-foreground">{interimTranscript}</span>
+                      </>
+                    )}
                   </p>
                 </div>
               )}
 
-              <Button 
-                onClick={handleStop}
-                variant="destructive" 
-                size="lg"
-                className="rounded-full h-16 w-16"
-              >
-                <Square className="h-6 w-6" />
-              </Button>
+              {demoMode ? (
+                <div className="flex flex-col gap-3">
+                  <Button 
+                    onClick={handleDemoStart}
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                    size="lg"
+                  >
+                    <Zap className="h-5 w-5 mr-2" />
+                    Run Demo Sample
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Sample {(demoSampleIndex % demoSamples.length) + 1} of {demoSamples.length}: "{demoSamples[demoSampleIndex % demoSamples.length].text}"
+                  </p>
+                  <Button variant="ghost" size="sm" onClick={handleNextDemoSample}>
+                    Next Sample →
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button 
+                    onClick={handleStop}
+                    variant="destructive" 
+                    size="lg"
+                    className="rounded-full h-16 w-16"
+                  >
+                    <Square className="h-6 w-6" />
+                  </Button>
 
-              <p className="text-sm text-muted-foreground">
-                {t.voice.tryExample}
-              </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t.voice.tryExample}
+                  </p>
+                </>
+              )}
             </div>
           )}
 
@@ -195,7 +288,7 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed }: VoiceIn
               </div>
 
               <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-foreground">{transcript}</p>
+                <p className="text-foreground">{demoMode ? demoTranscript : transcript}</p>
               </div>
             </div>
           )}
