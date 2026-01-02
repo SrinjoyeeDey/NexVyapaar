@@ -18,9 +18,12 @@ import {
   ClipboardList,
   Radio,
   UserCheck,
-  Shield
+  Shield,
+  History,
+  Settings
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 import {
   Sidebar,
@@ -34,38 +37,39 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const mainItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
-  { title: "Inventory", url: "/inventory", icon: Package },
-  { title: "Suppliers", url: "/suppliers", icon: Truck },
-  { title: "Purchase Orders", url: "/purchase-orders", icon: ClipboardList },
-  { title: "Broadcasts", url: "/broadcasts", icon: Radio },
-  { title: "Insights", url: "/insights", icon: Lightbulb },
-  { title: "Community", url: "/community", icon: Users },
-];
-
-const toolsItems = [
-  { title: "Integrations", url: "/integrations", icon: Plug },
-  { title: "Transactions", url: "/transactions", icon: Receipt },
-  { title: "Customer Consents", url: "/customer-consents", icon: UserCheck },
-  { title: "Civic Integration", url: "/settings/civic-integration", icon: Shield },
-  { title: "Voice Control", url: "/voice", icon: Mic },
-  { title: "Voice History", url: "/voice-history", icon: Mic },
-  { title: "Voice Settings", url: "/settings/voice", icon: Mic },
-  { title: "Competitor Analysis", url: "/competitor-analysis", icon: Target },
-  { title: "AR Preview", url: "/ar-preview", icon: Camera },
-  { title: "Marketing Campaigns", url: "/marketing", icon: Megaphone },
-  { title: "Academy", url: "/academy", icon: GraduationCap },
-  { title: "Referrals", url: "/referrals", icon: Gift },
-];
-
-const premiumItems = [
-  { title: "Upgrade to Premium", url: "/billing", icon: Crown },
-];
-
 export function AppSidebar() {
   const { open } = useSidebar();
+  const { t } = useLanguage();
+
+  const mainItems = [
+    { title: t.nav.dashboard, url: "/dashboard", icon: LayoutDashboard },
+    { title: t.nav.analytics, url: "/analytics", icon: BarChart3 },
+    { title: t.nav.inventory, url: "/inventory", icon: Package },
+    { title: t.nav.suppliers, url: "/suppliers", icon: Truck },
+    { title: t.nav.purchaseOrders, url: "/purchase-orders", icon: ClipboardList },
+    { title: t.nav.broadcasts, url: "/broadcasts", icon: Radio },
+    { title: t.nav.insights, url: "/insights", icon: Lightbulb },
+    { title: t.nav.community, url: "/community", icon: Users },
+  ];
+
+  const toolsItems = [
+    { title: t.nav.integrations, url: "/integrations", icon: Plug },
+    { title: t.nav.transactions, url: "/transactions", icon: Receipt },
+    { title: t.nav.customerConsents, url: "/customer-consents", icon: UserCheck },
+    { title: t.nav.civicIntegration, url: "/settings/civic-integration", icon: Shield },
+    { title: t.nav.voiceControl, url: "/voice", icon: Mic },
+    { title: t.voiceHistory?.title || "Voice History", url: "/voice-history", icon: History },
+    { title: t.voiceSettings?.title || "Voice Settings", url: "/settings/voice", icon: Settings },
+    { title: t.nav.competitorAnalysis, url: "/competitor-analysis", icon: Target },
+    { title: t.nav.arPreview, url: "/ar-preview", icon: Camera },
+    { title: t.nav.marketingCampaigns, url: "/marketing", icon: Megaphone },
+    { title: t.nav.academy, url: "/academy", icon: GraduationCap },
+    { title: t.nav.referrals, url: "/referrals", icon: Gift },
+  ];
+
+  const premiumItems = [
+    { title: t.nav.upgradeToPremium, url: "/billing", icon: Crown },
+  ];
 
   return (
     <Sidebar collapsible="icon" className="border-r">
@@ -75,7 +79,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end activeClassName="bg-accent text-accent-foreground font-medium">
                       <item.icon className="h-4 w-4" />
@@ -93,7 +97,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {toolsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end activeClassName="bg-accent text-accent-foreground font-medium">
                       <item.icon className="h-4 w-4" />
@@ -110,7 +114,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {premiumItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className="text-primary" activeClassName="bg-primary/10 font-medium">
                       <item.icon className="h-4 w-4" />

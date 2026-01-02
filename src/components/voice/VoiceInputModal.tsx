@@ -95,15 +95,20 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed, demoMode 
   // Auto-start listening when modal opens
   useEffect(() => {
     if (isOpen && modalState === 'listening' && !demoMode) {
-      startListening();
+      const timer = setTimeout(() => {
+        startListening();
+      }, 100);
       setRecordingTime(0);
+      return () => clearTimeout(timer);
     }
+  }, [isOpen, modalState, demoMode, startListening]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      if (isListening) {
-        stopListening();
-      }
+      stopListening();
     };
-  }, [isOpen, demoMode]);
+  }, [stopListening]);
 
   // Demo mode: simulate typing effect
   const runDemoSample = useCallback(() => {

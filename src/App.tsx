@@ -36,6 +36,7 @@ import VoiceSettings from "./pages/VoiceSettings";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { FloatingVoiceButton } from "@/components/voice/FloatingVoiceButton";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 const queryClient = new QueryClient();
 
@@ -44,9 +45,12 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen flex w-full">
       <AppSidebar />
       <div className="flex-1 flex flex-col">
-        <header className="h-14 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex items-center justify-between px-4">
+<header className="h-14 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex items-center justify-between px-4">
           <SidebarTrigger />
-          <VerifiedVendorBadge size="sm" />
+          <div className="flex items-center gap-3">
+            <LanguageSelector />
+            <VerifiedVendorBadge size="sm" />
+          </div>
         </header>
         <main className="flex-1">
           {children}
