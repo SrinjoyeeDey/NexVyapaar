@@ -7,8 +7,10 @@ import { Upload, TrendingUp, BarChart3, LogOut, Package } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { toast } from "sonner";
 import { InventoryBreakdown } from "@/components/InventoryBreakdown";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Analytics = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [uploadedData, setUploadedData] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -85,7 +87,7 @@ const Analytics = () => {
             <BarChart3 className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-2xl font-bold font-heading">NexVyapaar</h1>
-              <p className="text-xs text-muted-foreground">Analytics Dashboard</p>
+              <p className="text-xs text-muted-foreground">{t.nav.analytics}</p>
             </div>
           </div>
           <Button onClick={handleLogout} variant="outline" size="sm">

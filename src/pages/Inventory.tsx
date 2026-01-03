@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,7 @@ interface LowStockAlert {
 }
 
 const Inventory = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("raw-materials");
@@ -422,7 +424,7 @@ const Inventory = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Package className="h-8 w-8 text-primary" />
-            Inventory Dashboard
+            {t.nav.inventory}
             {isRealtimeConnected && (
               <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
                 <Wifi className="h-3 w-3 mr-1" />

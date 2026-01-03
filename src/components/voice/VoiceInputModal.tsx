@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Mic, Square, Check, Edit, X, Loader2, HelpCircle, Zap } from 'lucide-react';
 import { WaveformVisualizer } from './WaveformVisualizer';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
@@ -36,6 +37,9 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed, demoMode 
   const [recordingTime, setRecordingTime] = useState(0);
   const [parsedCommand, setParsedCommand] = useState<ParsedCommand | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [manualProduct, setManualProduct] = useState<string>('');
+  const [manualQuantity, setManualQuantity] = useState<string>('');
+  const [manualAmount, setManualAmount] = useState<string>('');
   const [demoTranscript, setDemoTranscript] = useState('');
   const [demoSampleIndex, setDemoSampleIndex] = useState(0);
 
@@ -48,11 +52,18 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed, demoMode 
     setTimeout(() => {
       const parsed = parseVoiceCommand(text, lang);
       setParsedCommand(parsed);
-      
+
+      const needsProduct = (parsed.type === 'sale' || parsed.type === 'inventory' || parsed.type === 'expired') && !parsed.product;
+      const needsQty = (parsed.type === 'sale' || parsed.type === 'inventory' || parsed.type === 'expired') && !parsed.quantity;
+      const needsAmount = parsed.type === 'sale' && !parsed.amount;
+
       if (parsed.type === 'unknown') {
         toast.error(t.voice.commandNotUnderstood);
         setModalState('listening');
-      } else if (parsed.suggestions && parsed.suggestions.length > 0) {
+      } else if ((parsed.suggestions && parsed.suggestions.length > 0) || needsProduct || needsQty || needsAmount) {
+        setManualProduct(parsed.product || '');
+        setManualQuantity(parsed.quantity ? String(parsed.quantity) : '');
+        setManualAmount(parsed.amount ? String(parsed.amount) : '');
         setModalState('clarify');
       } else {
         setModalState('result');
@@ -139,6 +150,9 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed, demoMode 
     setModalState('listening');
     setParsedCommand(null);
     setSelectedProduct('');
+    setManualProduct('');
+    setManualQuantity('');
+    setManualAmount('');
     setRecordingTime(0);
     setDemoTranscript('');
     onClose();
@@ -160,19 +174,40 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed, demoMode 
   };
 
   const handleProductSelect = () => {
-    if (selectedProduct && parsedCommand) {
-      const updatedCommand: ParsedCommand = {
-        ...parsedCommand,
-        product: selectedProduct,
-        amount: parsedCommand.quantity ? 
-          parsedCommand.quantity * (parsedCommand.suggestions?.find(s => s.name === selectedProduct)?.price || 10) : 
-          undefined,
-        confidence: 0.9,
-        suggestions: undefined
-      };
-      setParsedCommand(updatedCommand);
-      setModalState('result');
+    if (parsedCommand?.suggestions?.length) {
+      if (selectedProduct && parsedCommand) {
+        const updatedCommand: ParsedCommand = {
+          ...parsedCommand,
+          product: selectedProduct,
+          amount: parsedCommand.quantity ?
+            parsedCommand.quantity * (parsedCommand.suggestions?.find(s => s.name === selectedProduct)?.price || 10) :
+            undefined,
+          confidence: 0.9,
+          suggestions: undefined
+        };
+        setParsedCommand(updatedCommand);
+        setModalState('result');
+      }
+      return;
     }
+
+    // Manual clarification (missing fields)
+    if (!parsedCommand) return;
+
+    const qty = manualQuantity ? Number(manualQuantity) : undefined;
+    const amt = manualAmount ? Number(manualAmount) : undefined;
+
+    const updated: ParsedCommand = {
+      ...parsedCommand,
+      product: manualProduct || parsedCommand.product,
+      quantity: Number.isFinite(qty) ? qty : parsedCommand.quantity,
+      amount: Number.isFinite(amt) ? amt : parsedCommand.amount,
+      confidence: 0.85,
+      suggestions: undefined,
+    };
+
+    setParsedCommand(updated);
+    setModalState('result');
   };
 
   const handleRetry = () => {
@@ -371,25 +406,46 @@ export function VoiceInputModal({ isOpen, onClose, onCommandConfirmed, demoMode 
               </div>
 
               <div>
-                <p className="text-sm font-medium mb-3">{t.voice.whichProduct}</p>
-                <RadioGroup value={selectedProduct} onValueChange={setSelectedProduct}>
-                  {parsedCommand.suggestions?.map((product) => (
-                    <div key={product.name} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50">
-                      <RadioGroupItem value={product.name} id={product.name} />
-                      <Label htmlFor={product.name} className="flex-1 cursor-pointer">
-                        <span className="font-medium">{product.name}</span>
-                        <span className="text-muted-foreground ml-2">(₹{product.price} {t.common.each})</span>
-                      </Label>
+                {parsedCommand.suggestions?.length ? (
+                  <>
+                    <p className="text-sm font-medium mb-3">{t.voice.whichProduct}</p>
+                    <RadioGroup value={selectedProduct} onValueChange={setSelectedProduct}>
+                      {parsedCommand.suggestions?.map((product) => (
+                        <div key={product.name} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50">
+                          <RadioGroupItem value={product.name} id={product.name} />
+                          <Label htmlFor={product.name} className="flex-1 cursor-pointer">
+                            <span className="font-medium">{product.name}</span>
+                            <span className="text-muted-foreground ml-2">(₹{product.price} {t.common.each})</span>
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label>{t.voice.product}</Label>
+                      <Input value={manualProduct} onChange={(e) => setManualProduct(e.target.value)} placeholder="Parle-G / Milk / ..." />
                     </div>
-                  ))}
-                </RadioGroup>
+                    <div className="grid gap-2">
+                      <Label>{t.voice.quantity}</Label>
+                      <Input value={manualQuantity} onChange={(e) => setManualQuantity(e.target.value)} inputMode="numeric" placeholder="10" />
+                    </div>
+                    {parsedCommand.type === 'sale' && (
+                      <div className="grid gap-2">
+                        <Label>{t.voice.amount}</Label>
+                        <Input value={manualAmount} onChange={(e) => setManualAmount(e.target.value)} inputMode="numeric" placeholder="100" />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">
                 <Button 
                   onClick={handleProductSelect} 
                   className="flex-1"
-                  disabled={!selectedProduct}
+                  disabled={parsedCommand.suggestions?.length ? !selectedProduct : (!manualProduct || !manualQuantity)}
                 >
                   {t.common.select}
                 </Button>

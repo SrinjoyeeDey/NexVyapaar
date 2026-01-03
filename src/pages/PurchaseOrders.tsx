@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +96,7 @@ interface POItem {
 }
 
 const PurchaseOrders = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [createPOOpen, setCreatePOOpen] = useState(false);
@@ -115,6 +117,27 @@ const PurchaseOrders = () => {
       navigate('/auth');
     }
   }, [navigate]);
+
+  // Real-time subscriptions
+  useEffect(() => {
+    const channel = supabase
+      .channel('purchase-orders-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'purchase_orders' },
+        () => queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'purchase_order_items' },
+        () => queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Fetch suppliers
   const { data: suppliers } = useQuery({
@@ -385,7 +408,7 @@ const PurchaseOrders = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <ClipboardList className="h-8 w-8 text-primary" />
-            Purchase Orders
+            {t.nav.purchaseOrders}
           </h1>
           <p className="text-muted-foreground mt-1">
             Create and manage purchase orders with AI-powered reorder recommendations

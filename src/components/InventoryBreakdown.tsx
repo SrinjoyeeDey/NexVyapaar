@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,9 +61,23 @@ interface InventoryItem {
 }
 
 export const InventoryBreakdown = () => {
+  const queryClient = useQueryClient();
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [forecastModalOpen, setForecastModalOpen] = useState(false);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('sales-data-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_data' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['inventory-breakdown'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Fetch inventory data
   const { data: inventoryData, isLoading } = useQuery({
