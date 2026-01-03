@@ -105,15 +105,22 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
+
+        // Pick the best alternative (highest confidence)
+        let best = result[0];
+        for (let j = 1; j < result.length; j++) {
+          if (result[j].confidence > best.confidence) best = result[j];
+        }
+
         if (result.isFinal) {
-          finalTranscript += result[0].transcript;
+          finalTranscript += best.transcript;
           options.onResult?.({
-            transcript: result[0].transcript,
-            confidence: result[0].confidence,
+            transcript: best.transcript,
+            confidence: best.confidence,
             isFinal: true
           });
         } else {
-          interimText += result[0].transcript;
+          interimText += best.transcript;
         }
       }
 

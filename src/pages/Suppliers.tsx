@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,7 @@ interface Supplier {
 }
 
 const Suppliers = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [addSupplierOpen, setAddSupplierOpen] = useState(false);
@@ -99,6 +101,27 @@ const Suppliers = () => {
       navigate('/auth');
     }
   }, [navigate]);
+
+  // Real-time subscriptions
+  useEffect(() => {
+    let channel = supabase
+      .channel('suppliers-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'suppliers' },
+        () => queryClient.invalidateQueries({ queryKey: ['suppliers'] })
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'supplier_prices' },
+        () => queryClient.invalidateQueries({ queryKey: ['suppliers'] })
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Fetch suppliers
   const { data: suppliers, isLoading } = useQuery({
@@ -275,7 +298,7 @@ const Suppliers = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Truck className="h-8 w-8 text-primary" />
-            Supplier Management
+            {t.nav.suppliers}
           </h1>
           <p className="text-muted-foreground mt-1">
             Manage your suppliers, track delivery times, and compare performance

@@ -35,8 +35,8 @@ import VoiceHistory from "./pages/VoiceHistory";
 import VoiceSettings from "./pages/VoiceSettings";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { FloatingVoiceButton } from "@/components/voice/FloatingVoiceButton";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { VoiceCommandBridge } from "@/components/voice/VoiceCommandBridge";
 
 const queryClient = new QueryClient();
 
@@ -102,7 +102,7 @@ const App = () => (
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-            <FloatingVoiceButton />
+            <VoiceCommandBridge />
           </BrowserRouter>
         </VendorProvider>
       </LanguageProvider>

@@ -152,6 +152,16 @@ function parseLocalizedNumber(text: string): number {
   return parseInt(converted, 10) || 0;
 }
 
+function isAmbiguousProductText(productText: string) {
+  const p = productText.toLowerCase().trim();
+  return (
+    p.length < 4 ||
+    /(item|items|product|stuff|biscuit|biscuits)/i.test(p) ||
+    /(सामान|आइटम|वस्तु|बिस्किट)/i.test(productText) ||
+    /(আইটেম|পণ্য|বিস্কুট)/i.test(productText)
+  );
+}
+
 function findProduct(productText: string): ProductSuggestion | null {
   const normalized = productText.toLowerCase().trim();
   
@@ -201,7 +211,7 @@ export function parseVoiceCommand(text: string, language: string = 'en'): Parsed
       const quantity = parseLocalizedNumber(match[1]);
       const productText = match[2]?.trim();
       const amount = match[3] ? parseLocalizedNumber(match[3]) : undefined;
-      const product = findProduct(productText);
+      const product = productText ? findProduct(productText) : null;
 
       if (product) {
         return {
@@ -215,17 +225,26 @@ export function parseVoiceCommand(text: string, language: string = 'en'): Parsed
         };
       }
 
-      // Product not found, need clarification
+      // If user said a generic thing (e.g. "biscuit"), ask; otherwise accept their product text.
+      if (productText && isAmbiguousProductText(productText)) {
+        return {
+          type: 'sale',
+          action: 'Sale',
+          quantity,
+          confidence: 0.5,
+          rawText: text,
+          suggestions: commonProducts.filter(p => p.name.toLowerCase().includes('biscuit')).slice(0, 3)
+        };
+      }
+
       return {
         type: 'sale',
         action: 'Sale',
+        product: productText,
         quantity,
-        confidence: 0.5,
-        rawText: text,
-        suggestions: commonProducts.filter(p => 
-          p.name.toLowerCase().includes('biscuit') || 
-          productText.includes('biscuit')
-        ).slice(0, 3)
+        amount,
+        confidence: 0.75,
+        rawText: text
       };
     }
   }
@@ -236,16 +255,19 @@ export function parseVoiceCommand(text: string, language: string = 'en'): Parsed
     if (match) {
       const quantity = parseLocalizedNumber(match[1]);
       const productText = match[2]?.trim();
-      const product = findProduct(productText);
+      const product = productText ? findProduct(productText) : null;
+
+      const resolvedName = product?.name || productText;
+      const ambiguous = !!productText && isAmbiguousProductText(productText);
 
       return {
         type: 'inventory',
         action: 'Add Inventory',
-        product: product?.name || productText,
+        product: resolvedName,
         quantity,
-        confidence: product ? 0.9 : 0.6,
+        confidence: product ? 0.9 : 0.7,
         rawText: text,
-        suggestions: product ? undefined : commonProducts.slice(0, 3)
+        suggestions: !product && ambiguous ? commonProducts.slice(0, 3) : undefined
       };
     }
   }
