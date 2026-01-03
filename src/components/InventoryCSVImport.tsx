@@ -43,6 +43,7 @@ interface ParsedItem {
   seasonality_tag: string;
   type: "raw_material" | "finished_product";
   selling_price?: number;
+  expiry_date?: string;
   isValid: boolean;
   errors: string[];
 }
@@ -125,7 +126,7 @@ export const InventoryCSVImport = ({ open, onOpenChange, importType }: Inventory
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map(v => v.trim().replace(/['"]/g, ""));
       const row: Record<string, string> = {};
-      
+
       headers.forEach((header, index) => {
         row[header] = values[index] || "";
       });
@@ -135,10 +136,10 @@ export const InventoryCSVImport = ({ open, onOpenChange, importType }: Inventory
 
       const errors: string[] = [];
       const type = detectItemType(row);
-      
+
       // Validate required fields
       if (!name) errors.push("Name is required");
-      
+
       const item: ParsedItem = {
         name,
         category: row.category || detectCategory(name),
@@ -151,6 +152,7 @@ export const InventoryCSVImport = ({ open, onOpenChange, importType }: Inventory
         seasonality_tag: row.seasonality || row.season || detectSeasonality(name),
         type,
         selling_price: type === "finished_product" ? parseFloat(row.selling_price || "0") || 0 : undefined,
+        expiry_date: row.expiry_date || row.expiry || undefined,
         isValid: errors.length === 0,
         errors,
       };
@@ -175,7 +177,7 @@ export const InventoryCSVImport = ({ open, onOpenChange, importType }: Inventory
     reader.onload = (e) => {
       const text = e.target?.result as string;
       const items = parseCSV(text);
-      
+
       if (items.length === 0) {
         toast.error("No valid items found in CSV");
         return;
@@ -217,6 +219,7 @@ export const InventoryCSVImport = ({ open, onOpenChange, importType }: Inventory
               optimal_stock_level: item.optimal_stock_level,
               burn_rate: item.burn_rate,
               seasonality_tag: item.seasonality_tag,
+              expiry_date: item.expiry_date || null
             });
 
           if (!error) imported++;
@@ -237,6 +240,7 @@ export const InventoryCSVImport = ({ open, onOpenChange, importType }: Inventory
               selling_price: item.selling_price || 0,
               cost_to_produce: item.cost_per_unit,
               reorder_point: item.reorder_point,
+              expiry_date: item.expiry_date || null
             });
 
           if (!error) imported++;
@@ -265,12 +269,12 @@ export const InventoryCSVImport = ({ open, onOpenChange, importType }: Inventory
   };
 
   const downloadTemplate = () => {
-    const template = `name,category,current_stock,unit,cost_per_unit,reorder_point,optimal_stock_level,burn_rate,seasonality,type,selling_price
-Wheat Flour,bakery,100,kg,45,20,150,15,year_round,raw_material,
-Sugar,bakery,50,kg,42,15,100,10,year_round,raw_material,
-Coffee Beans,beverages,25,kg,850,5,50,3,year_round,raw_material,
-Chocolate Cake,bakery,10,pieces,150,5,30,8,year_round,finished_product,350
-Cold Coffee,beverages,20,cups,80,10,50,15,summer_peak,finished_product,180`;
+    const template = `name,category,current_stock,unit,cost_per_unit,reorder_point,optimal_stock_level,burn_rate,seasonality,type,selling_price,expiry_date
+Wheat Flour,bakery,100,kg,45,20,150,15,year_round,raw_material,,2025-12-31
+Sugar,bakery,50,kg,42,15,100,10,year_round,raw_material,,2026-06-30
+Coffee Beans,beverages,25,kg,850,5,50,3,year_round,raw_material,,2025-08-15
+Chocolate Cake,bakery,10,pieces,150,5,30,8,year_round,finished_product,350,2025-01-10
+Cold Coffee,beverages,20,cups,80,10,50,15,summer_peak,finished_product,180,2025-01-05`;
 
     const blob = new Blob([template], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);

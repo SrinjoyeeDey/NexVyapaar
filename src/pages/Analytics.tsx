@@ -17,13 +17,13 @@ const Analytics = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
-    toast.success("Logged out successfully");
+    toast.success(t.analytics.successLogout);
     navigate("/");
   };
 
   const handleFileUpload = (file: File) => {
     if (!file.name.endsWith('.csv')) {
-      toast.error("Please upload a CSV file");
+      toast.error(t.analytics.errorCSV);
       return;
     }
 
@@ -33,7 +33,7 @@ const Analytics = () => {
         const text = e.target?.result as string;
         const rows = text.split('\n').filter(row => row.trim());
         const headers = rows[0].split(',');
-        
+
         const data = rows.slice(1).map(row => {
           const values = row.split(',');
           const obj: any = {};
@@ -44,9 +44,9 @@ const Analytics = () => {
         });
 
         setUploadedData(data);
-        toast.success("CSV uploaded successfully!");
+        toast.success(t.analytics.successCSV);
       } catch (error) {
-        toast.error("Failed to parse CSV. Please check the format.");
+        toast.error(t.analytics.errorParse);
       }
     };
     reader.readAsText(file);
@@ -92,7 +92,7 @@ const Analytics = () => {
           </div>
           <Button onClick={handleLogout} variant="outline" size="sm">
             <LogOut className="h-4 w-4 mr-2" />
-            Logout
+            {t.nav.logout}
           </Button>
         </div>
       </header>
@@ -103,11 +103,11 @@ const Analytics = () => {
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Overview
+              {t.analytics.overview}
             </TabsTrigger>
             <TabsTrigger value="inventory" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
-              Inventory Breakdown
+              {t.analytics.inventoryBreakdown}
             </TabsTrigger>
           </TabsList>
 
@@ -115,128 +115,127 @@ const Analytics = () => {
           <TabsContent value="overview" className="space-y-8">
             {/* Upload Section */}
             <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
-              Upload Sales Data
-            </CardTitle>
-            <CardDescription>
-              Drag and drop your CSV file or click to browse
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              className={`border-2 border-dashed rounded-lg p-12 text-center transition-all ${
-                isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25"
-              }`}
-            >
-              <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-4">
-                Drop your CSV file here, or click to select
-              </p>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-                className="hidden"
-                id="file-upload"
-              />
-              <label htmlFor="file-upload">
-                <Button variant="outline" asChild>
-                  <span>Browse Files</span>
-                </Button>
-              </label>
-            </div>
-          </CardContent>
-        </Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  {t.analytics.uploadTitle}
+                </CardTitle>
+                <CardDescription>
+                  {t.analytics.uploadDesc}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`border-2 border-dashed rounded-lg p-12 text-center transition-all ${isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+                    }`}
+                >
+                  <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {t.analytics.dropZone}
+                  </p>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label htmlFor="file-upload">
+                    <Button variant="outline" asChild>
+                      <span>{t.analytics.browse}</span>
+                    </Button>
+                  </label>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Sales Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Sales Trends</CardTitle>
-              <CardDescription>Monthly sales performance</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={sampleData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="sales" fill="hsl(var(--primary))" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Sales Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t.analytics.salesTrends}</CardTitle>
+                  <CardDescription>{t.analytics.salesTrendsDesc}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={sampleData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="sales" fill="hsl(var(--primary))" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
 
-          {/* Profit Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Profit Analysis</CardTitle>
-              <CardDescription>Monthly profit trends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={sampleData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="profit" stroke="hsl(var(--primary))" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+              {/* Profit Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t.analytics.profitAnalysis}</CardTitle>
+                  <CardDescription>{t.analytics.profitAnalysisDesc}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={sampleData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="profit" stroke="hsl(var(--primary))" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* AI Forecasts (Premium Feature) */}
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              AI-Powered Forecasts
-              <span className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full">
-                Premium
-              </span>
-            </CardTitle>
-            <CardDescription>
-              Get AI predictions for next month's sales and trends
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="filter blur-sm pointer-events-none">
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={sampleData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} />
-                  <Line type="monotone" dataKey="profit" stroke="hsl(var(--accent))" strokeWidth={2} strokeDasharray="5 5" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Button onClick={() => navigate("/billing")} size="lg" className="shadow-lg">
-                Upgrade to Premium
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            {/* AI Forecasts (Premium Feature) */}
+            <Card className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  {t.analytics.aiForecast}
+                  <span className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full">
+                    {t.analytics.premium}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  {t.analytics.aiForecastDesc}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="filter blur-sm pointer-events-none">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={sampleData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} />
+                      <Line type="monotone" dataKey="profit" stroke="hsl(var(--accent))" strokeWidth={2} strokeDasharray="5 5" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Button onClick={() => navigate("/billing")} size="lg" className="shadow-lg">
+                    {t.analytics.upgrade}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Navigation */}
             <div className="mt-8 flex gap-4">
               <Button onClick={() => navigate("/dashboard")} variant="outline">
-                Back to Dashboard
+                {t.analytics.backToDashboard}
               </Button>
               <Button onClick={() => navigate("/advisor")} variant="default">
-                AI Advisor →
+                {t.analytics.aiAdvisor} →
               </Button>
             </div>
           </TabsContent>

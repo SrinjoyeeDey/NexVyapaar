@@ -1,10 +1,12 @@
 export interface ParsedCommand {
-  type: 'sale' | 'inventory' | 'expired' | 'payment' | 'return' | 'query' | 'unknown';
+  type: 'sale' | 'inventory' | 'expired' | 'payment' | 'return' | 'query' | 'purchase_order' | 'unknown';
   action: string;
   product?: string;
   quantity?: number;
   amount?: number;
   customer?: string;
+  supplier?: string;
+  expiryDate?: string;
   confidence: number;
   rawText: string;
   suggestions?: ProductSuggestion[];
@@ -21,6 +23,7 @@ interface CommandPatternSet {
   expired: RegExp[];
   payment: RegExp[];
   return: RegExp[];
+  purchase_order: RegExp[];
   query?: RegExp[];
 }
 
@@ -62,6 +65,11 @@ const commandPatterns = {
     return: [
       /(.+?)\s+returned\s+(\d+)\s+(.+)/i
     ],
+    purchase_order: [
+      /order\s+(\d+)\s+(.+?)\s+from\s+(.+)/i,
+      /buy\s+(\d+)\s+(.+?)\s+from\s+(.+)/i,
+      /order\s+(.+?)\s+(\d+)\s+pieces\s+from\s+(.+)/i
+    ],
     query: [
       /(?:show|what(?:'s)?|how\s+much)\s+(.+)/i
     ]
@@ -83,6 +91,10 @@ const commandPatterns = {
     ],
     return: [
       /(.+?)\s+ने\s+(\d+)\s+(.+?)\s+वापस/i
+    ],
+    purchase_order: [
+      /(.+?)\s+से\s+(\d+)\s+(.+?)\s+(?:ऑर्डर|खरीदें|order)/i,
+      /order\s+(\d+)\s+(.+?)\s+(.+?)\s+से/i
     ]
   } as CommandPatternSet,
   bn: {
@@ -164,10 +176,10 @@ function isAmbiguousProductText(productText: string) {
 
 function findProduct(productText: string): ProductSuggestion | null {
   const normalized = productText.toLowerCase().trim();
-  
+
   // Direct match
-  const direct = commonProducts.find(p => 
-    p.name.toLowerCase().includes(normalized) || 
+  const direct = commonProducts.find(p =>
+    p.name.toLowerCase().includes(normalized) ||
     normalized.includes(p.name.toLowerCase())
   );
   if (direct) return direct;
@@ -260,15 +272,59 @@ export function parseVoiceCommand(text: string, language: string = 'en'): Parsed
       const resolvedName = product?.name || productText;
       const ambiguous = !!productText && isAmbiguousProductText(productText);
 
+      // Simple expiry detection in English "Add 20 Maggi expiring 2025-12-30"
+      const expiryMatch = match[0].match(/(?:expiring|expiry|exp|expires)\s*(?:on|at)?\s*(\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4})/i);
+
       return {
         type: 'inventory',
         action: 'Add Inventory',
         product: resolvedName,
         quantity,
+        expiryDate: expiryMatch ? expiryMatch[1] : undefined,
         confidence: product ? 0.9 : 0.7,
         rawText: text,
         suggestions: !product && ambiguous ? commonProducts.slice(0, 3) : undefined
       };
+    }
+  }
+
+  // Try purchase order patterns
+  for (const pattern of patterns.purchase_order || []) {
+    const match = normalizedText.match(pattern);
+    if (match) {
+      if (lang === 'en') {
+        // order (1:qty) (2:product) from (3:supplier)
+        const quantity = parseLocalizedNumber(match[1]);
+        const productText = match[2]?.trim();
+        const supplier = match[3]?.trim();
+        const product = findProduct(productText);
+
+        return {
+          type: 'purchase_order',
+          action: 'Purchase Order',
+          product: product?.name || productText,
+          quantity,
+          supplier,
+          confidence: 0.9,
+          rawText: text
+        };
+      } else if (lang === 'hi') {
+        // (1:supplier) से (2:qty) (3:product) (order)
+        const supplier = match[1]?.trim();
+        const quantity = parseLocalizedNumber(match[2]);
+        const productText = match[3]?.trim();
+        const product = findProduct(productText);
+
+        return {
+          type: 'purchase_order',
+          action: 'Purchase Order',
+          product: product?.name || productText,
+          quantity,
+          supplier,
+          confidence: 0.9,
+          rawText: text
+        };
+      }
     }
   }
 

@@ -127,7 +127,11 @@ const Suppliers = () => {
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ['suppliers', sortBy],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
       if (!user) throw new Error("Not authenticated");
 
       let query = supabase
@@ -152,7 +156,11 @@ const Suppliers = () => {
   // Add supplier mutation
   const addSupplierMutation = useMutation({
     mutationFn: async (supplier: typeof supplierForm) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase
@@ -176,16 +184,23 @@ const Suppliers = () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setAddSupplierOpen(false);
       resetForm();
-      toast.success("Supplier added successfully!");
+      toast.success(t.suppliers.addedSuccess);
     },
     onError: (error) => {
-      toast.error("Failed to add supplier: " + error.message);
+      toast.error((t.common.error || "Error") + ": " + error.message);
     }
   });
 
   // Update supplier mutation
   const updateSupplierMutation = useMutation({
     mutationFn: async (supplier: typeof supplierForm) => {
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
+      if (!user) throw new Error("Not authenticated");
+
       const { error } = await supabase
         .from('suppliers')
         .update({
@@ -207,16 +222,23 @@ const Suppliers = () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setEditSupplierOpen(false);
       resetForm();
-      toast.success("Supplier updated successfully!");
+      toast.success(t.suppliers.updatedSuccess);
     },
     onError: (error) => {
-      toast.error("Failed to update supplier: " + error.message);
+      toast.error((t.common.error || "Error") + ": " + error.message);
     }
   });
 
   // Delete supplier mutation
   const deleteSupplierMutation = useMutation({
     mutationFn: async (id: string) => {
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
+      if (!user) throw new Error("Not authenticated");
+
       const { error } = await supabase
         .from('suppliers')
         .delete()
@@ -226,10 +248,10 @@ const Suppliers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast.success("Supplier deleted");
+      toast.success(t.suppliers.deletedSuccess);
     },
     onError: (error) => {
-      toast.error("Failed to delete supplier: " + error.message);
+      toast.error((t.common.error || "Error") + ": " + error.message);
     }
   });
 
@@ -265,8 +287,8 @@ const Suppliers = () => {
   };
 
   const toggleSupplierSelection = (id: string) => {
-    setSelectedSuppliers(prev => 
-      prev.includes(id) 
+    setSelectedSuppliers(prev =>
+      prev.includes(id)
         ? prev.filter(s => s !== id)
         : prev.length < 3 ? [...prev, id] : prev
     );
@@ -307,7 +329,7 @@ const Suppliers = () => {
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setPriceHistoryOpen(true)}>
             <History className="h-4 w-4 mr-2" />
-            Price History
+            {t.inventory.priceHistory}
           </Button>
           <Button
             variant={compareMode ? "default" : "outline"}
@@ -317,25 +339,25 @@ const Suppliers = () => {
             }}
           >
             <BarChart3 className="h-4 w-4 mr-2" />
-            {compareMode ? "Exit Compare" : "Compare"}
+            {compareMode ? t.suppliers.exitCompare : t.suppliers.compare}
           </Button>
           <Dialog open={addSupplierOpen} onOpenChange={setAddSupplierOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Supplier
+                {t.suppliers.addSupplier}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Add New Supplier</DialogTitle>
+                <DialogTitle>{t.suppliers.addSupplierTitle}</DialogTitle>
                 <DialogDescription>
-                  Add a new supplier to your network
+                  {t.suppliers.addSupplierDesc}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Supplier Name *</Label>
+                  <Label htmlFor="name">{t.suppliers.supplierName} *</Label>
                   <Input
                     id="name"
                     value={supplierForm.name}
@@ -345,7 +367,7 @@ const Suppliers = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="contact_person">Contact Person</Label>
+                    <Label htmlFor="contact_person">{t.suppliers.contactPerson}</Label>
                     <Input
                       id="contact_person"
                       value={supplierForm.contact_person}
@@ -354,7 +376,7 @@ const Suppliers = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone">{t.suppliers.phone}</Label>
                     <Input
                       id="phone"
                       value={supplierForm.phone}
@@ -364,7 +386,7 @@ const Suppliers = () => {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t.suppliers.email}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -374,7 +396,7 @@ const Suppliers = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="address">Address</Label>
+                  <Label htmlFor="address">{t.suppliers.address}</Label>
                   <Textarea
                     id="address"
                     value={supplierForm.address}
@@ -385,7 +407,7 @@ const Suppliers = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="delivery_time">Delivery Time (days)</Label>
+                    <Label htmlFor="delivery_time">{t.suppliers.deliveryTime}</Label>
                     <Input
                       id="delivery_time"
                       type="number"
@@ -395,7 +417,7 @@ const Suppliers = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="rating">Rating (0-5)</Label>
+                    <Label htmlFor="rating">{t.suppliers.rating}</Label>
                     <Input
                       id="rating"
                       type="number"
@@ -409,7 +431,7 @@ const Suppliers = () => {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="payment_terms">Payment Terms</Label>
+                  <Label htmlFor="payment_terms">{t.suppliers.paymentTerms}</Label>
                   <Input
                     id="payment_terms"
                     value={supplierForm.payment_terms}
@@ -418,7 +440,7 @@ const Suppliers = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">{t.suppliers.notes}</Label>
                   <Textarea
                     id="notes"
                     value={supplierForm.notes}
@@ -430,13 +452,13 @@ const Suppliers = () => {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => { setAddSupplierOpen(false); resetForm(); }}>
-                  Cancel
+                  {t.common.cancel}
                 </Button>
-                <Button 
+                <Button
                   onClick={() => addSupplierMutation.mutate(supplierForm)}
                   disabled={!supplierForm.name || addSupplierMutation.isPending}
                 >
-                  {addSupplierMutation.isPending ? "Adding..." : "Add Supplier"}
+                  {addSupplierMutation.isPending ? t.inventory.adding : t.suppliers.addSupplier}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -450,16 +472,16 @@ const Suppliers = () => {
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Compare Mode Active</p>
+                <p className="font-medium">{t.suppliers.compareModeTitle}</p>
                 <p className="text-sm text-muted-foreground">
-                  Select up to 3 suppliers to compare. Selected: {selectedSuppliers.length}/3
+                  {t.suppliers.compareModeDesc.replace("{count}", selectedSuppliers.length.toString())}
                 </p>
               </div>
               <Button
                 disabled={selectedSuppliers.length < 2}
                 onClick={() => setCompareSheetOpen(true)}
               >
-                Compare Selected
+                {t.suppliers.compareSelected}
               </Button>
             </div>
           </CardContent>
@@ -471,7 +493,7 @@ const Suppliers = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Suppliers
+              {t.suppliers.totalSuppliers}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -481,21 +503,21 @@ const Suppliers = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg. Delivery Time
+              {t.suppliers.avgLeadTime}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {suppliers && suppliers.length > 0
                 ? Math.round(suppliers.reduce((sum, s) => sum + (s.delivery_time_days || 7), 0) / suppliers.length)
-                : 0} days
+                : 0} {t.suppliers.days}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Top Rated
+              {t.suppliers.topRated}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -507,7 +529,7 @@ const Suppliers = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Fastest Delivery
+              {t.suppliers.fastestDelivery}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -520,27 +542,27 @@ const Suppliers = () => {
 
       {/* Sort Controls */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Sort by:</span>
+        <span className="text-sm text-muted-foreground">{t.suppliers.sortBy}:</span>
         <Button
           variant={sortBy === "name" ? "default" : "ghost"}
           size="sm"
           onClick={() => setSortBy("name")}
         >
-          Name
+          {t.suppliers.supplierName}
         </Button>
         <Button
           variant={sortBy === "rating" ? "default" : "ghost"}
           size="sm"
           onClick={() => setSortBy("rating")}
         >
-          Rating
+          {t.suppliers.rating}
         </Button>
         <Button
           variant={sortBy === "delivery" ? "default" : "ghost"}
           size="sm"
           onClick={() => setSortBy("delivery")}
         >
-          Delivery Time
+          {t.suppliers.deliveryTime}
         </Button>
       </div>
 
@@ -556,17 +578,17 @@ const Suppliers = () => {
               <TableHeader>
                 <TableRow>
                   {compareMode && <TableHead className="w-12"></TableHead>}
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Delivery</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Payment Terms</TableHead>
+                  <TableHead>{t.suppliers.supplierName}</TableHead>
+                  <TableHead>{t.suppliers.contactPerson}</TableHead>
+                  <TableHead>{t.suppliers.deliveryTime}</TableHead>
+                  <TableHead>{t.suppliers.rating}</TableHead>
+                  <TableHead>{t.suppliers.paymentTerms}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {suppliers.map((supplier) => (
-                  <TableRow 
+                  <TableRow
                     key={supplier.id}
                     className={selectedSuppliers.includes(supplier.id) ? "bg-primary/10" : ""}
                   >
@@ -610,7 +632,7 @@ const Suppliers = () => {
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4 text-muted-foreground" />
-                        {supplier.delivery_time_days || 7} days
+                        {supplier.delivery_time_days || 7} {t.suppliers.days}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -623,20 +645,20 @@ const Suppliers = () => {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {supplier.payment_terms || "Not specified"}
+                        {supplier.payment_terms || t.suppliers.notSpecified}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button 
-                          size="icon" 
+                        <Button
+                          size="icon"
                           variant="ghost"
                           onClick={() => openEditDialog(supplier)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          size="icon" 
+                        <Button
+                          size="icon"
                           variant="ghost"
                           onClick={() => deleteSupplierMutation.mutate(supplier.id)}
                         >
@@ -654,13 +676,13 @@ const Suppliers = () => {
         <Card>
           <CardContent className="py-12 text-center">
             <Truck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No suppliers yet</h3>
+            <h3 className="text-lg font-semibold mb-2">{t.suppliers.noSuppliers}</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Add your first supplier to start managing your supply chain
+              {t.suppliers.addFirstSupplier}
             </p>
             <Button onClick={() => setAddSupplierOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Supplier
+              {t.suppliers.addSupplier}
             </Button>
           </CardContent>
         </Card>
@@ -670,14 +692,14 @@ const Suppliers = () => {
       <Dialog open={editSupplierOpen} onOpenChange={setEditSupplierOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Supplier</DialogTitle>
+            <DialogTitle>{t.suppliers.editSupplier}</DialogTitle>
             <DialogDescription>
-              Update supplier information
+              {t.suppliers.editSupplierDesc}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
             <div className="grid gap-2">
-              <Label htmlFor="edit_name">Supplier Name *</Label>
+              <Label htmlFor="edit_name">{t.suppliers.supplierName} *</Label>
               <Input
                 id="edit_name"
                 value={supplierForm.name}
@@ -686,7 +708,7 @@ const Suppliers = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit_contact">Contact Person</Label>
+                <Label htmlFor="edit_contact">{t.suppliers.contactPerson}</Label>
                 <Input
                   id="edit_contact"
                   value={supplierForm.contact_person}
@@ -694,7 +716,7 @@ const Suppliers = () => {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit_phone">Phone</Label>
+                <Label htmlFor="edit_phone">{t.suppliers.phone}</Label>
                 <Input
                   id="edit_phone"
                   value={supplierForm.phone}
@@ -703,7 +725,7 @@ const Suppliers = () => {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit_email">Email</Label>
+              <Label htmlFor="edit_email">{t.suppliers.email}</Label>
               <Input
                 id="edit_email"
                 type="email"
@@ -712,7 +734,7 @@ const Suppliers = () => {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit_address">Address</Label>
+              <Label htmlFor="edit_address">{t.suppliers.address}</Label>
               <Textarea
                 id="edit_address"
                 value={supplierForm.address}
@@ -722,7 +744,7 @@ const Suppliers = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit_delivery">Delivery Time (days)</Label>
+                <Label htmlFor="edit_delivery">{t.suppliers.deliveryTime}</Label>
                 <Input
                   id="edit_delivery"
                   type="number"
@@ -731,7 +753,7 @@ const Suppliers = () => {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit_rating">Rating (0-5)</Label>
+                <Label htmlFor="edit_rating">{t.suppliers.rating}</Label>
                 <Input
                   id="edit_rating"
                   type="number"
@@ -744,7 +766,7 @@ const Suppliers = () => {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit_payment">Payment Terms</Label>
+              <Label htmlFor="edit_payment">{t.suppliers.paymentTerms}</Label>
               <Input
                 id="edit_payment"
                 value={supplierForm.payment_terms}
@@ -752,7 +774,7 @@ const Suppliers = () => {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit_notes">Notes</Label>
+              <Label htmlFor="edit_notes">{t.suppliers.notes}</Label>
               <Textarea
                 id="edit_notes"
                 value={supplierForm.notes}
@@ -763,13 +785,13 @@ const Suppliers = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setEditSupplierOpen(false); resetForm(); }}>
-              Cancel
+              {t.common.cancel}
             </Button>
-            <Button 
+            <Button
               onClick={() => updateSupplierMutation.mutate(supplierForm)}
               disabled={!supplierForm.name || updateSupplierMutation.isPending}
             >
-              {updateSupplierMutation.isPending ? "Saving..." : "Save Changes"}
+              {updateSupplierMutation.isPending ? t.common.saving : t.suppliers.saveChanges}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -779,16 +801,16 @@ const Suppliers = () => {
       <Sheet open={compareSheetOpen} onOpenChange={setCompareSheetOpen}>
         <SheetContent className="w-[600px] sm:w-[800px] sm:max-w-[800px]">
           <SheetHeader>
-            <SheetTitle>Supplier Comparison</SheetTitle>
+            <SheetTitle>{t.suppliers.comparison}</SheetTitle>
             <SheetDescription>
-              Compare selected suppliers side by side
+              {t.suppliers.comparisonDesc}
             </SheetDescription>
           </SheetHeader>
           <div className="mt-6">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Metric</TableHead>
+                  <TableHead>{t.suppliers.metric}</TableHead>
                   {getSelectedSuppliersData().map((s) => (
                     <TableHead key={s.id} className="text-center">{s.name}</TableHead>
                   ))}
@@ -796,7 +818,13 @@ const Suppliers = () => {
               </TableHeader>
               <TableBody>
                 <TableRow>
-                  <TableCell className="font-medium">Rating</TableCell>
+                  <TableCell className="font-medium">{t.suppliers.metric}</TableCell>
+                  {getSelectedSuppliersData().map((s) => (
+                    <TableHead key={s.id} className="text-center">{s.name}</TableHead>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">{t.suppliers.rating}</TableCell>
                   {getSelectedSuppliersData().map((s) => {
                     const maxRating = Math.max(...getSelectedSuppliersData().map(sp => sp.rating || 0));
                     const isMax = s.rating === maxRating;
@@ -811,7 +839,7 @@ const Suppliers = () => {
                   })}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Delivery Time</TableCell>
+                  <TableCell className="font-medium">{t.suppliers.deliveryTime}</TableCell>
                   {getSelectedSuppliersData().map((s) => {
                     const minDelivery = Math.min(...getSelectedSuppliersData().map(sp => sp.delivery_time_days || 99));
                     const isBest = s.delivery_time_days === minDelivery;
@@ -819,14 +847,14 @@ const Suppliers = () => {
                       <TableCell key={s.id} className="text-center">
                         <div className={`flex items-center justify-center gap-1 ${isBest ? "text-green-600 font-bold" : ""}`}>
                           {isBest && <CheckCircle className="h-4 w-4" />}
-                          {s.delivery_time_days || 7} days
+                          {s.delivery_time_days || 7} {t.suppliers.days}
                         </div>
                       </TableCell>
                     );
                   })}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Payment Terms</TableCell>
+                  <TableCell className="font-medium">{t.suppliers.paymentTerms}</TableCell>
                   {getSelectedSuppliersData().map((s) => (
                     <TableCell key={s.id} className="text-center">
                       {s.payment_terms || "N/A"}
@@ -834,7 +862,7 @@ const Suppliers = () => {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Contact</TableCell>
+                  <TableCell className="font-medium">{t.suppliers.contactPerson}</TableCell>
                   {getSelectedSuppliersData().map((s) => (
                     <TableCell key={s.id} className="text-center">
                       {s.contact_person || "N/A"}
@@ -842,7 +870,7 @@ const Suppliers = () => {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Location</TableCell>
+                  <TableCell className="font-medium">{t.suppliers.location || "Location"}</TableCell>
                   {getSelectedSuppliersData().map((s) => (
                     <TableCell key={s.id} className="text-center text-sm">
                       {s.address ? s.address.substring(0, 50) + (s.address.length > 50 ? "..." : "") : "N/A"}

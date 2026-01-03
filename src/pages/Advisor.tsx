@@ -3,7 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Mic, Send, LogOut, TrendingUp, AlertCircle } from "lucide-react";
+import { Sparkles, Mic, Send, LogOut, TrendingUp, AlertCircle, Scan } from "lucide-react";
+import { KhataScanner } from "@/components/KhataScanner";
+import { KhataItem } from "@/services/VisionService";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination } from "swiper/modules";
@@ -25,7 +34,37 @@ const Advisor = () => {
   ]);
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [khataScannerOpen, setKhataScannerOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch Khata Import stats for insights
+  const { data: khataStats } = useQuery({
+    queryKey: ['khata-stats'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data: sales } = await supabase
+        .from('sales_data')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('category', 'Khata Import');
+
+      const { data: expiring } = await supabase
+        .from('raw_materials')
+        .select('name, expiry_date')
+        .eq('user_id', user.id)
+        .not('expiry_date', 'is', null)
+        .lte('expiry_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+
+      return {
+        count: sales?.length || 0,
+        recent: sales?.[0]?.product_name,
+        expiringCount: expiring?.length || 0,
+        expiringItem: expiring?.[0]?.name
+      };
+    }
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -69,7 +108,7 @@ const Advisor = () => {
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     const recognition = new SpeechRecognition();
-    
+
     recognition.onstart = () => {
       setIsListening(true);
       toast.info("Listening...");
@@ -114,7 +153,70 @@ const Advisor = () => {
       impact: "Medium",
       color: "from-primary to-accent",
     },
+    ...(khataStats?.count ? [{
+      impact: "Very High",
+      color: "from-purple-600 to-indigo-600",
+    }] : []),
+    ...(khataStats?.expiringCount ? [{
+      title: "Expiry Alert!",
+      description: `${khataStats.expiringItem} is expiring within 7 days. Consider a clearance sale.`,
+      impact: "Critical",
+      color: "from-red-600 to-orange-600",
+    }] : []),
   ];
+
+  const handleKhataData = async (items: KhataItem[]) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    for (const item of items) {
+      if (item.type === 'sale') {
+        await supabase
+          .from('sales_data')
+          .insert({
+            user_id: user.id,
+            product_name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            sale_date: item.date,
+            category: 'Khata Import',
+            expiry_date: item.expiry_date || null
+          });
+      } else {
+        const { data: existing } = await supabase
+          .from('raw_materials')
+          .select('id, current_stock')
+          .eq('user_id', user.id)
+          .eq('name', item.name)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase
+            .from('raw_materials')
+            .update({
+              current_stock: (existing.current_stock || 0) + item.quantity,
+              cost_per_unit: item.price,
+              expiry_date: item.expiry_date || null
+            })
+            .eq('id', existing.id);
+        } else {
+          await supabase.from('raw_materials').insert({
+            user_id: user.id,
+            name: item.name,
+            current_stock: item.quantity,
+            unit: item.unit,
+            cost_per_unit: item.price,
+            category: 'Khata Import',
+            expiry_date: item.expiry_date || null
+          });
+        }
+      }
+    }
+
+    setKhataScannerOpen(false);
+    toast.success("Khata insights generated!");
+    navigate('/advisor'); // Refresh state
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
@@ -128,10 +230,26 @@ const Advisor = () => {
               <p className="text-xs text-muted-foreground">Your AI Business Coach</p>
             </div>
           </div>
-          <Button onClick={handleLogout} variant="outline" size="sm">
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <Dialog open={khataScannerOpen} onOpenChange={setKhataScannerOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
+                  <Scan className="h-4 w-4 mr-2" />
+                  Quick Khata Scan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-0 shadow-none">
+                <KhataScanner
+                  context="general"
+                  onDataExtracted={handleKhataData}
+                />
+              </DialogContent>
+            </Dialog>
+            <Button onClick={handleLogout} variant="outline" size="sm">
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -193,11 +311,10 @@ const Advisor = () => {
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                      }`}
                   >
                     {msg.content}
                   </div>

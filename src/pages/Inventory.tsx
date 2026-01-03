@@ -49,11 +49,15 @@ import {
   Upload,
   History,
   Wifi,
+  Scan,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { InventoryCSVImport } from "@/components/InventoryCSVImport";
 import { SupplierPriceHistory } from "@/components/SupplierPriceHistory";
+import { KhataScanner } from "@/components/KhataScanner";
+import { ShelfScanner } from "@/components/ShelfScanner";
+import { KhataItem, ShelfDelta } from "@/services/VisionService";
 
 interface RawMaterial {
   id: string;
@@ -67,6 +71,7 @@ interface RawMaterial {
   cost_per_unit: number | null;
   supplier_id: string | null;
   seasonality_tag: string | null;
+  expiry_date?: string | null;
 }
 
 interface FinishedProduct {
@@ -104,6 +109,8 @@ const Inventory = () => {
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | undefined>();
   const [selectedMaterialName, setSelectedMaterialName] = useState<string | undefined>();
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [khataScannerOpen, setKhataScannerOpen] = useState(false);
+  const [shelfScannerOpen, setShelfScannerOpen] = useState(false);
 
   // Form states
   const [materialForm, setMaterialForm] = useState({
@@ -236,7 +243,11 @@ const Inventory = () => {
   // Add raw material mutation
   const addMaterialMutation = useMutation({
     mutationFn: async (material: typeof materialForm) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase
@@ -270,7 +281,11 @@ const Inventory = () => {
   // Add finished product mutation
   const addProductMutation = useMutation({
     mutationFn: async (product: typeof productForm) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase
@@ -301,6 +316,13 @@ const Inventory = () => {
   // Acknowledge alert mutation
   const acknowledgeAlertMutation = useMutation({
     mutationFn: async (alertId: string) => {
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
+      if (!user) throw new Error("Not authenticated");
+
       const { error } = await supabase
         .from('low_stock_alerts')
         .update({ is_acknowledged: true })
@@ -317,6 +339,13 @@ const Inventory = () => {
   // Delete material mutation
   const deleteMaterialMutation = useMutation({
     mutationFn: async (id: string) => {
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
+      if (!user) throw new Error("Not authenticated");
+
       const { error } = await supabase
         .from('raw_materials')
         .delete()
@@ -330,7 +359,270 @@ const Inventory = () => {
     }
   });
 
-  // Delete product mutation
+  const handleKhataData = async (items: KhataItem[]) => {
+    let { data: { user } } = await supabase.auth.getUser();
+
+    // Fallback to session if getUser fails
+    if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user ?? null;
+    }
+
+    if (!user) {
+      toast.error("User not authenticated. Please log in again.");
+      return;
+    }
+
+    let updatedCount = 0;
+    let newCount = 0;
+    let poCreated = false;
+
+    try {
+      // 1. Group items by supplier for PO creation
+      // For now, we'll create one PO for all inventory items if there's at least one inventory item
+      const inventoryItems = items.filter(i => i.type === 'inventory');
+
+      let poId: string | null = null;
+      if (inventoryItems.length > 0) {
+        // Find a supplier from the scan, or use a default one
+        const firstSupplierName = items.find(i => i.supplier)?.supplier;
+        let supplierId = null;
+
+        if (firstSupplierName) {
+          const { data: sData } = await supabase
+            .from('suppliers')
+            .select('id')
+            .ilike('name', `% ${firstSupplierName}% `)
+            .maybeSingle();
+          supplierId = sData?.id;
+        }
+
+        // Create PO Header
+        const { data: poData, error: poError } = await supabase
+          .from('purchase_orders')
+          .insert({
+            user_id: user.id,
+            po_number: `SCAN - ${Date.now().toString(36).toUpperCase()} `,
+            status: 'confirmed', // Automatically mark as confirmed since we have the data
+            total_amount: inventoryItems.reduce((sum, i) => sum + (i.price * i.quantity), 0),
+            notes: 'Created via Khata Scan',
+            supplier_id: supplierId // May be null if no supplier detected
+          })
+          .select('id')
+          .single();
+
+        if (poError) {
+          console.error("PO Creation Error:", poError);
+          toast.error("Failed to create Purchase Order record");
+        } else {
+          poId = poData.id;
+          poCreated = true;
+        }
+      }
+
+      for (const item of items) {
+        let supplierId = null;
+
+        // Handle Supplier lookup/creation
+        if (item.supplier) {
+          const { data: existingSupplier } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('user_id', user.id)
+            .ilike('name', `% ${item.supplier}% `)
+            .maybeSingle();
+
+          if (existingSupplier) {
+            supplierId = existingSupplier.id;
+          } else {
+            const { data: newSupplier, error: sError } = await supabase
+              .from('suppliers')
+              .insert({
+                user_id: user.id,
+                name: item.supplier,
+                notes: 'Auto-created from Khata Scan'
+              })
+              .select('id')
+              .single();
+
+            if (!sError) supplierId = newSupplier.id;
+          }
+        }
+
+        if (item.type === 'inventory') {
+          const existing = rawMaterials?.find(m => m.name.toLowerCase() === item.name.toLowerCase());
+          let materialId = existing?.id;
+
+          if (existing) {
+            const newStock = (existing.current_stock || 0) + item.quantity;
+            const { error: invError } = await supabase
+              .from('raw_materials')
+              .update({
+                current_stock: newStock,
+                cost_per_unit: item.price,
+                expiry_date: item.expiry_date || existing.expiry_date,
+                supplier_id: supplierId || existing.supplier_id
+              })
+              .eq('id', existing.id);
+
+            if (invError) throw invError;
+            updatedCount++;
+          } else {
+            const { data: newMat, error: invError } = await supabase
+              .from('raw_materials')
+              .insert({
+                user_id: user.id,
+                name: item.name,
+                current_stock: item.quantity,
+                unit: item.unit,
+                cost_per_unit: item.price,
+                category: 'Khata Import',
+                expiry_date: item.expiry_date || null,
+                supplier_id: supplierId
+              })
+              .select('id')
+              .single();
+
+            if (invError) throw invError;
+            materialId = newMat?.id;
+            newCount++;
+          }
+
+          // Create PO Item if PO was created
+          if (poId && materialId) {
+            await supabase
+              .from('purchase_order_items')
+              .insert({
+                purchase_order_id: poId,
+                material_id: materialId,
+                quantity: item.quantity,
+                unit_price: item.price,
+                total_price: item.quantity * item.price
+              });
+          }
+        } else if (item.type === 'sale') {
+          const { error: saleError } = await supabase
+            .from('sales_data')
+            .insert({
+              user_id: user.id,
+              product_name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              sale_date: item.date,
+              category: 'Khata Import',
+              expiry_date: item.expiry_date || null
+            });
+
+          if (saleError) throw saleError;
+          updatedCount++;
+        }
+      }
+
+      queryClient.invalidateQueries();
+      setKhataScannerOpen(false);
+      toast.success(`Khata Sync Complete! ${updatedCount + newCount} items processed.${poCreated ? ' Purchase Order generated.' : ''} `);
+
+    } catch (error: any) {
+      console.error("Khata Sync Detailed Error:", error);
+      toast.error(`Sync partially failed: ${error.message || "Database connection error"} `);
+    }
+  };
+
+  const handleShelfDeltas = async (deltas: ShelfDelta[]) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let salesCount = 0;
+      let lossCount = 0;
+      let restockCount = 0;
+      let autoPOCount = 0;
+
+      for (const delta of deltas) {
+        if (delta.action === 'sold') {
+          // 1. Log Sale or Loss
+          const isSale = delta.reason === 'sale';
+
+          await supabase.from('sales_data').insert({
+            user_id: user.id,
+            product_name: delta.name,
+            quantity: isSale ? Math.abs(delta.delta) : 0,
+            waste_quantity: !isSale ? Math.abs(delta.delta) : 0,
+            price: (delta.price || 0),
+            sale_date: new Date().toISOString()
+          });
+
+          // 2. Decrement Stock
+          const { data: material } = await (supabase as any)
+            .from('raw_materials')
+            .select('id, current_stock, supplier_id')
+            .ilike('name', delta.name)
+            .maybeSingle();
+
+          if (material) {
+            await (supabase as any)
+              .from('raw_materials')
+              .update({ current_stock: Number(material.current_stock) - Math.abs(delta.delta) })
+              .eq('id', material.id);
+
+            // 3. Auto-PO if triggered (Fast PO button) or if critically low
+            // In a real scenario, we'd check if the user clicked Fast PO. 
+            // Here we'll treat 'Critical' during the scan as a trigger if they accepted the deltas
+            if (delta.reorderPoint !== undefined && (Number(material.current_stock) - Math.abs(delta.delta)) <= delta.reorderPoint) {
+              const poNumber = `AUTO-SHELF-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+              const { data: po } = await (supabase as any).from('purchase_orders').insert({
+                user_id: user.id,
+                po_number: poNumber,
+                supplier_id: material.supplier_id,
+                status: 'pending',
+                total_amount: Math.abs(delta.delta) * (delta.price || 0) * 2 // Suggested restock: 2x delta
+              }).select().single();
+
+              if (po) {
+                await (supabase as any).from('purchase_order_items').insert({
+                  purchase_order_id: po.id,
+                  material_id: material.id, // Assuming material_id is the correct column name
+                  quantity: Math.abs(delta.delta) * 2,
+                  unit_price: delta.price || 0
+                });
+                autoPOCount++;
+              }
+            }
+          }
+
+          if (isSale) salesCount++;
+          else lossCount++;
+
+        } else if (delta.action === 'restocked') {
+          // 3. Increment Stock
+          const { data: material } = await (supabase as any)
+            .from('raw_materials')
+            .select('id, current_stock')
+            .ilike('name', delta.name)
+            .maybeSingle();
+
+          if (material) {
+            await (supabase as any)
+              .from('raw_materials')
+              .update({ current_stock: Number(material.current_stock) + Math.abs(delta.delta) })
+              .eq('id', material.id);
+          }
+          restockCount++;
+        }
+      }
+
+      queryClient.invalidateQueries();
+      setShelfScannerOpen(false);
+      toast.success(
+        `Visual Sync Complete! Logged ${salesCount} sales, ${lossCount} losses, and restocked ${restockCount} items. ${autoPOCount > 0 ? `Generated ${autoPOCount} Purchase Orders.` : ''}`
+      );
+    } catch (error: any) {
+      console.error("Shelf Delta Sync Error:", error);
+      toast.error(`Failed to update database: ${error.message}`);
+    }
+  };
+
   const deleteProductMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -386,7 +678,7 @@ const Inventory = () => {
     if (!item.burn_rate || !item.current_stock || !item.optimal_stock_level) return null;
     const daysOfStock = item.current_stock / (item.burn_rate / 7);
     const amountNeeded = item.optimal_stock_level - item.current_stock;
-    
+
     if (daysOfStock < 7 && amountNeeded > 0) {
       return {
         urgent: true,
@@ -433,21 +725,50 @@ const Inventory = () => {
             )}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Real-time stock levels, alerts, and AI-powered reorder recommendations
+            {t.inventory.statsSubtitle || "Real-time stock levels, alerts, and AI-powered reorder recommendations"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setCsvImportOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
-            Import CSV
+            {t.inventory.importCSV}
           </Button>
+          <Dialog open={khataScannerOpen} onOpenChange={setKhataScannerOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-200">
+                <Scan className="h-4 w-4 mr-2" />
+                Khata Scanner
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-0 shadow-none">
+              <KhataScanner
+                context={activeTab === 'raw-materials' ? 'inventory' : 'sales'}
+                onDataExtracted={handleKhataData}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={shelfScannerOpen} onOpenChange={setShelfScannerOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-200">
+                <PackageOpen className="h-4 w-4 mr-2" />
+                Visual Shelf Check
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-5xl p-0 overflow-hidden bg-transparent border-0 shadow-none">
+              <ShelfScanner
+                onComplete={handleShelfDeltas}
+              />
+            </DialogContent>
+          </Dialog>
+
           <Button variant="outline" onClick={() => {
             setSelectedMaterialId(undefined);
             setSelectedMaterialName(undefined);
             setPriceHistoryOpen(true);
           }}>
             <History className="h-4 w-4 mr-2" />
-            Price History
+            {t.inventory.priceHistory}
           </Button>
           <Button variant="outline" onClick={() => queryClient.invalidateQueries()}>
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -461,13 +782,13 @@ const Inventory = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Raw Materials
+              {t.inventory.rawMaterials}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{rawMaterials?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              ₹{totalMaterialsValue.toLocaleString()} total value
+              ₹{totalMaterialsValue.toLocaleString()} {t.inventory.stockValue}
             </p>
           </CardContent>
         </Card>
@@ -475,13 +796,13 @@ const Inventory = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Finished Products
+              {t.inventory.finishedProducts}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{finishedProducts?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              ₹{totalProductsValue.toLocaleString()} total value
+              ₹{totalProductsValue.toLocaleString()} {t.inventory.stockValue}
             </p>
           </CardContent>
         </Card>
@@ -490,13 +811,13 @@ const Inventory = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              Low Stock Items
+              {t.inventory.lowStockItems}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{lowStockCount}</div>
             <p className="text-xs text-muted-foreground">
-              Requires attention
+              {t.inventory.requiresAttention}
             </p>
           </CardContent>
         </Card>
@@ -505,7 +826,7 @@ const Inventory = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <Bell className="h-4 w-4" />
-              Active Alerts
+              {t.inventory.activeAlerts}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -523,7 +844,7 @@ const Inventory = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-600">
               <Bell className="h-5 w-5" />
-              Low Stock Alerts
+              {t.inventory.activeAlerts}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -535,12 +856,12 @@ const Inventory = () => {
                     <div>
                       <p className="font-medium">{alert.message}</p>
                       <p className="text-sm text-muted-foreground">
-                        Current: {alert.current_value} | Threshold: {alert.threshold_value}
+                        {t.voice?.quantity || "Current"}: {alert.current_value} | {t.inventory.reorderPoint}: {alert.threshold_value}
                       </p>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => acknowledgeAlertMutation.mutate(alert.id)}
                   >
@@ -559,30 +880,30 @@ const Inventory = () => {
         <TabsList className="grid w-full grid-cols-2 max-w-md">
           <TabsTrigger value="raw-materials" className="flex items-center gap-2">
             <PackageOpen className="h-4 w-4" />
-            Raw Materials
+            {t.inventory.rawMaterials}
           </TabsTrigger>
           <TabsTrigger value="finished-products" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Finished Products
+            {t.inventory.finishedProducts}
           </TabsTrigger>
         </TabsList>
 
         {/* Raw Materials Tab */}
         <TabsContent value="raw-materials" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Raw Materials Inventory</h3>
+            <h3 className="text-lg font-semibold">{t.inventory.rawMaterialsInv}</h3>
             <Dialog open={addMaterialOpen} onOpenChange={setAddMaterialOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Material
+                  {t.inventory.addMaterial}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Add Raw Material</DialogTitle>
+                  <DialogTitle>{t.inventory.addMaterial}</DialogTitle>
                   <DialogDescription>
-                    Add a new raw material to track inventory levels
+                    {t.inventory.addMaterialDesc || "Add a new raw material to track inventory levels"}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -607,19 +928,19 @@ const Inventory = () => {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="unit">Unit</Label>
-                      <Select 
-                        value={materialForm.unit} 
+                      <Select
+                        value={materialForm.unit}
                         onValueChange={(v) => setMaterialForm({ ...materialForm, unit: v })}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                          <SelectItem value="g">Grams (g)</SelectItem>
-                          <SelectItem value="l">Liters (l)</SelectItem>
-                          <SelectItem value="ml">Milliliters (ml)</SelectItem>
-                          <SelectItem value="units">Units</SelectItem>
+                          <SelectItem value="kg">{t.inventory.kg || "Kilograms (kg)"}</SelectItem>
+                          <SelectItem value="g">{t.inventory.g || "Grams (g)"}</SelectItem>
+                          <SelectItem value="l">{t.inventory.l || "Liters (l)"}</SelectItem>
+                          <SelectItem value="ml">{t.inventory.ml || "Milliliters (ml)"}</SelectItem>
+                          <SelectItem value="units">{t.inventory.units || "Units"}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -683,7 +1004,7 @@ const Inventory = () => {
                   <Button variant="outline" onClick={() => setAddMaterialOpen(false)}>
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => addMaterialMutation.mutate(materialForm)}
                     disabled={!materialForm.name || addMaterialMutation.isPending}
                   >
@@ -704,12 +1025,13 @@ const Inventory = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Stock Level</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Burn Rate</TableHead>
-                      <TableHead>AI Recommendation</TableHead>
+                      <TableHead>{t.inventory.material}</TableHead>
+                      <TableHead>{t.nav.category || "Category"}</TableHead>
+                      <TableHead>{t.inventory.stockLevel}</TableHead>
+                      <TableHead>{t.common.status}</TableHead>
+                      <TableHead>{t.inventory.burnRate}</TableHead>
+                      <TableHead>Weekly Trend</TableHead>
+                      <TableHead>{t.inventory.aiRecommendation}</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -717,8 +1039,8 @@ const Inventory = () => {
                     {rawMaterials.map((material) => {
                       const status = getStockStatus(material.current_stock, material.reorder_point);
                       const recommendation = getReorderRecommendation(material);
-                      const stockPercentage = material.optimal_stock_level 
-                        ? ((material.current_stock || 0) / material.optimal_stock_level) * 100 
+                      const stockPercentage = material.optimal_stock_level
+                        ? ((material.current_stock || 0) / material.optimal_stock_level) * 100
                         : 50;
 
                       return (
@@ -741,8 +1063,8 @@ const Inventory = () => {
                                   {material.current_stock || 0} {material.unit}
                                 </span>
                               </div>
-                              <Progress 
-                                value={Math.min(stockPercentage, 100)} 
+                              <Progress
+                                value={Math.min(stockPercentage, 100)}
                                 className="h-2"
                               />
                               <p className="text-xs text-muted-foreground">
@@ -751,12 +1073,12 @@ const Inventory = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge 
+                            <Badge
                               variant={status.color as any}
                               className={
                                 status.status === "Critical" ? "bg-destructive text-destructive-foreground" :
-                                status.status === "Low" ? "bg-amber-500 text-white" :
-                                status.status === "Good" ? "bg-green-500 text-white" : ""
+                                  status.status === "Low" ? "bg-amber-500 text-white" :
+                                    status.status === "Good" ? "bg-green-500 text-white" : ""
                               }
                             >
                               {status.status}
@@ -773,8 +1095,23 @@ const Inventory = () => {
                             )}
                           </TableCell>
                           <TableCell>
+                            {material.burn_rate && material.burn_rate > 10 ? (
+                              <Badge className="bg-orange-100/80 text-orange-700 border-none flex items-center gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                Fast Moving 🔥
+                              </Badge>
+                            ) : material.burn_rate && material.burn_rate > 0 ? (
+                              <Badge className="bg-indigo-100/80 text-indigo-700 border-none flex items-center gap-1">
+                                <TrendingDown className="h-3 w-3" />
+                                Steady
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-slate-400">Stable</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             {recommendation ? (
-                              <div className={`text-sm p-2 rounded ${recommendation.urgent ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600"}`}>
+                              <div className={`text - sm p - 2 rounded ${recommendation.urgent ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600"} `}>
                                 <div className="flex items-center gap-1">
                                   <Sparkles className="h-3 w-3" />
                                   {recommendation.message}
@@ -786,8 +1123,8 @@ const Inventory = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button 
-                                size="icon" 
+                              <Button
+                                size="icon"
                                 variant="ghost"
                                 onClick={() => deleteMaterialMutation.mutate(material.id)}
                               >
@@ -905,7 +1242,7 @@ const Inventory = () => {
                   <Button variant="outline" onClick={() => setAddProductOpen(false)}>
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => addProductMutation.mutate(productForm)}
                     disabled={!productForm.name || !productForm.selling_price || addProductMutation.isPending}
                   >
@@ -938,7 +1275,7 @@ const Inventory = () => {
                   <TableBody>
                     {finishedProducts.map((product) => {
                       const status = getStockStatus(product.current_stock, product.reorder_point);
-                      const margin = product.cost_to_produce 
+                      const margin = product.cost_to_produce
                         ? ((product.selling_price - product.cost_to_produce) / product.selling_price * 100).toFixed(1)
                         : null;
 
@@ -955,12 +1292,12 @@ const Inventory = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge 
+                            <Badge
                               variant={status.color as any}
                               className={
                                 status.status === "Critical" ? "bg-destructive text-destructive-foreground" :
-                                status.status === "Low" ? "bg-amber-500 text-white" :
-                                status.status === "Good" ? "bg-green-500 text-white" : ""
+                                  status.status === "Low" ? "bg-amber-500 text-white" :
+                                    status.status === "Good" ? "bg-green-500 text-white" : ""
                               }
                             >
                               {status.status}
@@ -977,8 +1314,8 @@ const Inventory = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              size="icon" 
+                            <Button
+                              size="icon"
                               variant="ghost"
                               onClick={() => deleteProductMutation.mutate(product.id)}
                             >

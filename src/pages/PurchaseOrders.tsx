@@ -23,6 +23,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -51,9 +52,12 @@ import {
   Truck,
   Calculator,
   AlertTriangle,
+  Scan,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { KhataScanner } from "@/components/KhataScanner";
+import { KhataItem } from "@/services/VisionService";
 
 interface Supplier {
   id: string;
@@ -103,7 +107,8 @@ const PurchaseOrders = () => {
   const [viewPOOpen, setViewPOOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [aiRecommendationsOpen, setAiRecommendationsOpen] = useState(false);
-  
+  const [khataScannerOpen, setKhataScannerOpen] = useState(false);
+
   // PO Form state
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [poItems, setPoItems] = useState<POItem[]>([]);
@@ -143,7 +148,11 @@ const PurchaseOrders = () => {
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -161,7 +170,11 @@ const PurchaseOrders = () => {
   const { data: rawMaterials } = useQuery({
     queryKey: ['raw-materials'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -179,7 +192,11 @@ const PurchaseOrders = () => {
   const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ['purchase-orders'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -196,14 +213,18 @@ const PurchaseOrders = () => {
   // Create PO mutation
   const createPOMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+      }
       if (!user) throw new Error("Not authenticated");
 
       const supplier = suppliers?.find(s => s.id === selectedSupplier);
       const totalAmount = poItems.reduce((sum, item) => sum + item.total_price, 0);
       const poNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
-      
-      const expectedDelivery = supplier?.delivery_time_days 
+
+      const expectedDelivery = supplier?.delivery_time_days
         ? new Date(Date.now() + supplier.delivery_time_days * 24 * 60 * 60 * 1000).toISOString()
         : null;
 
@@ -245,10 +266,10 @@ const PurchaseOrders = () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       setCreatePOOpen(false);
       resetForm();
-      toast.success("Purchase order created successfully!");
+      toast.success(t.purchaseOrders.createdSuccess);
     },
     onError: (error) => {
-      toast.error("Failed to create PO: " + error.message);
+      toast.error(t.purchaseOrders.failedCreate + ": " + error.message);
     }
   });
 
@@ -264,7 +285,7 @@ const PurchaseOrders = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-      toast.success("Status updated!");
+      toast.success(t.purchaseOrders.statusUpdated);
     }
   });
 
@@ -286,7 +307,7 @@ const PurchaseOrders = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-      toast.success("Purchase order deleted");
+      toast.success(t.purchaseOrders.deletedSuccess);
     }
   });
 
@@ -296,21 +317,160 @@ const PurchaseOrders = () => {
     setNotes("");
   };
 
+  const handleKhataData = async (items: KhataItem[]) => {
+    let { data: { user } } = await supabase.auth.getUser();
+
+    // Fallback to session if getUser fails
+    if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user ?? null;
+    }
+
+    if (!user) {
+      toast.error("User not authenticated. Please log in again.");
+      return;
+    }
+
+    let poCreated = false;
+    let inventoryUpdated = 0;
+
+    try {
+      const inventoryItems = items.filter(i => i.type === 'inventory');
+
+      if (inventoryItems.length > 0) {
+        // 1. Detect/Handle Supplier
+        const firstSupplierName = items.find(i => i.supplier)?.supplier;
+        let supplierId = null;
+
+        if (firstSupplierName) {
+          const { data: existingSupplier } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('user_id', user.id)
+            .ilike('name', `%${firstSupplierName}%`)
+            .maybeSingle();
+
+          if (existingSupplier) {
+            supplierId = existingSupplier.id;
+          } else {
+            const { data: newSupplier, error: sError } = await supabase
+              .from('suppliers')
+              .insert({
+                user_id: user.id,
+                name: firstSupplierName,
+                notes: 'Auto-created from PO Khata Scan'
+              })
+              .select('id')
+              .single();
+            if (!sError) supplierId = newSupplier.id;
+          }
+        }
+
+        // 2. Create PO Header
+        const { data: poData, error: poError } = await supabase
+          .from('purchase_orders')
+          .insert({
+            user_id: user.id,
+            po_number: `SCAN-${Date.now().toString(36).toUpperCase()}`,
+            status: 'confirmed',
+            total_amount: inventoryItems.reduce((sum, i) => sum + (i.price * i.quantity), 0),
+            notes: 'Created via Khata Scan from Purchase Orders page',
+            supplier_id: supplierId
+          })
+          .select('id')
+          .single();
+
+        if (poError) throw poError;
+        poCreated = true;
+
+        // 3. Process each item
+        for (const item of inventoryItems) {
+          // Find or update raw material
+          const { data: existingMaterial } = await supabase
+            .from('raw_materials')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('name', item.name)
+            .maybeSingle();
+
+          let materialId = existingMaterial?.id;
+
+          if (existingMaterial) {
+            const newStock = (existingMaterial.current_stock || 0) + item.quantity;
+            await supabase
+              .from('raw_materials')
+              .update({
+                current_stock: newStock,
+                cost_per_unit: item.price,
+                expiry_date: item.expiry_date || existingMaterial.expiry_date,
+                supplier_id: supplierId || existingMaterial.supplier_id
+              })
+              .eq('id', existingMaterial.id);
+            inventoryUpdated++;
+          } else {
+            const { data: newMat, error: matError } = await supabase
+              .from('raw_materials')
+              .insert({
+                user_id: user.id,
+                name: item.name,
+                current_stock: item.quantity,
+                unit: item.unit,
+                cost_per_unit: item.price,
+                category: 'Khata Import',
+                expiry_date: item.expiry_date || null,
+                supplier_id: supplierId
+              })
+              .select('id')
+              .single();
+
+            if (!matError) {
+              materialId = newMat.id;
+              inventoryUpdated++;
+            }
+          }
+
+          // Create PO Item
+          if (materialId) {
+            await supabase
+              .from('purchase_order_items')
+              .insert({
+                purchase_order_id: poData.id,
+                material_id: materialId,
+                quantity: item.quantity,
+                unit_price: item.price,
+                total_price: item.quantity * item.price
+              });
+          }
+        }
+      }
+
+      queryClient.invalidateQueries();
+      setKhataScannerOpen(false);
+      toast.success(poCreated
+        ? `Purchase Order created and ${inventoryUpdated} inventory items updated!`
+        : "No inventory items found in scan.");
+
+    } catch (error: any) {
+      console.error("PO Khata Sync Error:", error);
+      toast.error(`Failed to sync PO: ${error.message}`);
+    }
+  };
+
   // AI-powered reorder recommendations
   const generateAIRecommendations = () => {
     setIsGeneratingAI(true);
-    
+
     // Calculate items that need reordering based on burn rate and stock levels
     const recommendations: POItem[] = [];
-    
+
     rawMaterials?.forEach(material => {
       if (!material.current_stock || !material.reorder_point) return;
-      
+
       // Check if stock is below or near reorder point
       if (material.current_stock <= (material.reorder_point * 1.2)) {
         const optimalStock = material.optimal_stock_level || material.reorder_point * 2;
         const quantityNeeded = Math.max(optimalStock - material.current_stock, 0);
-        
+
         if (quantityNeeded > 0) {
           // Apply burn rate adjustment for seasonal demand
           let adjustedQuantity = quantityNeeded;
@@ -319,7 +479,7 @@ const PurchaseOrders = () => {
             const safetyStock = material.burn_rate * 2;
             adjustedQuantity = Math.max(quantityNeeded, safetyStock);
           }
-          
+
           recommendations.push({
             material_id: material.id,
             material_name: material.name,
@@ -336,16 +496,16 @@ const PurchaseOrders = () => {
       setPoItems(recommendations);
       setIsGeneratingAI(false);
       if (recommendations.length > 0) {
-        toast.success(`Found ${recommendations.length} items that need reordering!`);
+        toast.success(t.purchaseOrders.foundItems.replace("{count}", recommendations.length.toString()));
       } else {
-        toast.info("All inventory levels look good!");
+        toast.info(t.purchaseOrders.inventoryGood);
       }
     }, 1500);
   };
 
   const addItemToPO = (material: RawMaterial) => {
     if (poItems.find(item => item.material_id === material.id)) {
-      toast.error("Item already added");
+      toast.error(t.purchaseOrders.itemAddedError);
       return;
     }
 
@@ -363,8 +523,8 @@ const PurchaseOrders = () => {
   };
 
   const updateItemQuantity = (materialId: string, quantity: number) => {
-    setPoItems(poItems.map(item => 
-      item.material_id === materialId 
+    setPoItems(poItems.map(item =>
+      item.material_id === materialId
         ? { ...item, quantity, total_price: quantity * item.unit_price }
         : item
     ));
@@ -384,17 +544,17 @@ const PurchaseOrders = () => {
     };
     const style = styles[status] || styles.draft;
     const Icon = style.icon;
-    
+
     return (
       <Badge variant={style.variant} className="flex items-center gap-1">
         <Icon className="h-3 w-3" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {t.purchaseOrders.statusLabels[status as keyof typeof t.purchaseOrders.statusLabels] || status}
       </Badge>
     );
   };
 
   const getSupplierName = (supplierId: string) => {
-    return suppliers?.find(s => s.id === supplierId)?.name || "Unknown";
+    return suppliers?.find(s => s.id === supplierId)?.name || t.suppliers.notSpecified || "Unknown";
   };
 
   // Summary stats
@@ -411,17 +571,31 @@ const PurchaseOrders = () => {
             {t.nav.purchaseOrders}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Create and manage purchase orders with AI-powered reorder recommendations
+            {t.purchaseOrders.subtitle}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setAiRecommendationsOpen(true)}>
             <Sparkles className="h-4 w-4 mr-2" />
-            AI Recommendations
+            {t.purchaseOrders.aiRecommendations}
           </Button>
+          <Dialog open={khataScannerOpen} onOpenChange={setKhataScannerOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-200">
+                <Scan className="h-4 w-4 mr-2" />
+                Khata Scanner
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-0 shadow-none">
+              <KhataScanner
+                context="inventory"
+                onDataExtracted={handleKhataData}
+              />
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => setCreatePOOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Create PO
+            {t.purchaseOrders.createPO}
           </Button>
         </div>
       </div>
@@ -431,7 +605,7 @@ const PurchaseOrders = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Orders
+              {t.purchaseOrders.totalOrders}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -441,7 +615,7 @@ const PurchaseOrders = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending Delivery
+              {t.purchaseOrders.pendingDelivery}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -451,7 +625,7 @@ const PurchaseOrders = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Value
+              {t.purchaseOrders.totalValue}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -461,7 +635,7 @@ const PurchaseOrders = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Suppliers
+              {t.purchaseOrders.activeSuppliers}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -473,23 +647,23 @@ const PurchaseOrders = () => {
       {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Purchase Orders</CardTitle>
-          <CardDescription>View and manage your purchase orders</CardDescription>
+          <CardTitle>{t.purchaseOrders.allOrders}</CardTitle>
+          <CardDescription>{t.purchaseOrders.allOrdersDesc}</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">{t.common.loading || "Loading..."}</div>
           ) : purchaseOrders && purchaseOrders.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>PO Number</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Order Date</TableHead>
-                  <TableHead>Expected Delivery</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t.purchaseOrders.poNumber}</TableHead>
+                  <TableHead>{t.purchaseOrders.supplier}</TableHead>
+                  <TableHead>{t.purchaseOrders.status}</TableHead>
+                  <TableHead>{t.purchaseOrders.amount}</TableHead>
+                  <TableHead>{t.purchaseOrders.orderDate}</TableHead>
+                  <TableHead>{t.purchaseOrders.expectedDelivery}</TableHead>
+                  <TableHead className="text-right">{t.purchaseOrders.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -503,8 +677,8 @@ const PurchaseOrders = () => {
                       {po.order_date ? new Date(po.order_date).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>
-                      {po.expected_delivery_date 
-                        ? new Date(po.expected_delivery_date).toLocaleDateString() 
+                      {po.expected_delivery_date
+                        ? new Date(po.expected_delivery_date).toLocaleDateString()
                         : '-'}
                     </TableCell>
                     <TableCell className="text-right">
@@ -554,13 +728,13 @@ const PurchaseOrders = () => {
           ) : (
             <div className="text-center py-12">
               <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No purchase orders yet</h3>
+              <h3 className="text-lg font-medium mb-2">{t.purchaseOrders.noOrders}</h3>
               <p className="text-muted-foreground mb-4">
-                Create your first purchase order to start tracking supplier orders
+                {t.purchaseOrders.addFirstPO}
               </p>
               <Button onClick={() => setCreatePOOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Purchase Order
+                {t.purchaseOrders.createPO}
               </Button>
             </div>
           )}
@@ -573,20 +747,20 @@ const PurchaseOrders = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5" />
-              Create Purchase Order
+              {t.purchaseOrders.createPOTitle}
             </DialogTitle>
             <DialogDescription>
-              Create a new purchase order for your supplier
+              {t.purchaseOrders.createPODesc}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
             {/* Supplier Selection */}
             <div className="space-y-2">
-              <Label>Select Supplier *</Label>
+              <Label>{t.purchaseOrders.selectSupplier} *</Label>
               <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a supplier" />
+                  <SelectValue placeholder={t.purchaseOrders.chooseSupplier} />
                 </SelectTrigger>
                 <SelectContent>
                   {suppliers?.map((supplier) => (
@@ -616,24 +790,24 @@ const PurchaseOrders = () => {
                 className="flex-1"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                {isGeneratingAI ? "Calculating..." : "Auto-generate from AI Recommendations"}
+                {isGeneratingAI ? t.purchaseOrders.calculating : t.purchaseOrders.autoGenerate}
               </Button>
             </div>
 
             {/* Add Items Manually */}
             <div className="space-y-2">
-              <Label>Add Items</Label>
+              <Label>{t.purchaseOrders.addItems}</Label>
               <Select onValueChange={(value) => {
                 const material = rawMaterials?.find(m => m.id === value);
                 if (material) addItemToPO(material);
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select material to add" />
+                  <SelectValue placeholder={t.purchaseOrders.selectMaterial} />
                 </SelectTrigger>
                 <SelectContent>
                   {rawMaterials?.filter(m => !poItems.find(i => i.material_id === m.id)).map((material) => (
                     <SelectItem key={material.id} value={material.id}>
-                      {material.name} (Stock: {material.current_stock} {material.unit})
+                      {material.name} ({t.inventory.stock}: {material.current_stock} {material.unit})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -646,10 +820,10 @@ const PurchaseOrders = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Unit Price</TableHead>
-                      <TableHead>Total</TableHead>
+                      <TableHead>{t.purchaseOrders.material}</TableHead>
+                      <TableHead>{t.purchaseOrders.quantity}</TableHead>
+                      <TableHead>{t.purchaseOrders.unitPrice}</TableHead>
+                      <TableHead>{t.purchaseOrders.total}</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -683,7 +857,7 @@ const PurchaseOrders = () => {
                     ))}
                     <TableRow className="bg-muted/50">
                       <TableCell colSpan={3} className="font-medium text-right">
-                        Total Amount:
+                        {t.purchaseOrders.totalAmount}:
                       </TableCell>
                       <TableCell className="font-bold text-lg">
                         ₹{poItems.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}
@@ -697,12 +871,12 @@ const PurchaseOrders = () => {
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Label htmlFor="notes">{t.purchaseOrders.notes}</Label>
               <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any special instructions or notes..."
+                placeholder={t.purchaseOrders.notesPlaceholder}
                 rows={3}
               />
             </div>
@@ -710,13 +884,13 @@ const PurchaseOrders = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => { setCreatePOOpen(false); resetForm(); }}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               onClick={() => createPOMutation.mutate()}
               disabled={!selectedSupplier || poItems.length === 0 || createPOMutation.isPending}
             >
-              {createPOMutation.isPending ? "Creating..." : "Create Purchase Order"}
+              {createPOMutation.isPending ? t.common.saving || "Saving..." : t.purchaseOrders.createPO}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -726,7 +900,7 @@ const PurchaseOrders = () => {
       <Sheet open={viewPOOpen} onOpenChange={setViewPOOpen}>
         <SheetContent className="w-full sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle>Purchase Order Details</SheetTitle>
+            <SheetTitle>{t.purchaseOrders.poDetails}</SheetTitle>
             <SheetDescription>
               {selectedPO?.po_number}
             </SheetDescription>
@@ -735,46 +909,46 @@ const PurchaseOrders = () => {
             <div className="mt-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-muted-foreground">Supplier</Label>
+                  <Label className="text-muted-foreground">{t.purchaseOrders.supplier}</Label>
                   <p className="font-medium">{getSupplierName(selectedPO.supplier_id)}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Status</Label>
+                  <Label className="text-muted-foreground">{t.purchaseOrders.status}</Label>
                   <div className="mt-1">{getStatusBadge(selectedPO.status)}</div>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Order Date</Label>
+                  <Label className="text-muted-foreground">{t.purchaseOrders.orderDate}</Label>
                   <p className="font-medium">
-                    {selectedPO.order_date 
-                      ? new Date(selectedPO.order_date).toLocaleDateString() 
+                    {selectedPO.order_date
+                      ? new Date(selectedPO.order_date).toLocaleDateString()
                       : '-'}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Expected Delivery</Label>
+                  <Label className="text-muted-foreground">{t.purchaseOrders.expectedDelivery}</Label>
                   <p className="font-medium">
-                    {selectedPO.expected_delivery_date 
-                      ? new Date(selectedPO.expected_delivery_date).toLocaleDateString() 
+                    {selectedPO.expected_delivery_date
+                      ? new Date(selectedPO.expected_delivery_date).toLocaleDateString()
                       : '-'}
                   </p>
                 </div>
               </div>
-              
+
               <div className="pt-4 border-t">
-                <Label className="text-muted-foreground">Total Amount</Label>
+                <Label className="text-muted-foreground">{t.purchaseOrders.totalAmount}</Label>
                 <p className="text-2xl font-bold">₹{selectedPO.total_amount.toLocaleString()}</p>
               </div>
 
               {selectedPO.notes && (
                 <div className="pt-4 border-t">
-                  <Label className="text-muted-foreground">Notes</Label>
+                  <Label className="text-muted-foreground">{t.purchaseOrders.notes}</Label>
                   <p className="mt-1">{selectedPO.notes}</p>
                 </div>
               )}
 
               <div className="pt-4 flex gap-2">
                 {selectedPO.status === 'draft' && (
-                  <Button 
+                  <Button
                     className="flex-1"
                     onClick={() => {
                       updateStatusMutation.mutate({ id: selectedPO.id, status: 'sent' });
@@ -782,11 +956,11 @@ const PurchaseOrders = () => {
                     }}
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    Send to Supplier
+                    {t.purchaseOrders.sendToSupplier}
                   </Button>
                 )}
                 {selectedPO.status === 'sent' && (
-                  <Button 
+                  <Button
                     className="flex-1"
                     onClick={() => {
                       updateStatusMutation.mutate({ id: selectedPO.id, status: 'delivered' });
@@ -794,7 +968,7 @@ const PurchaseOrders = () => {
                     }}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Mark as Delivered
+                    {t.purchaseOrders.markDelivered}
                   </Button>
                 )}
               </div>
@@ -823,7 +997,7 @@ const PurchaseOrders = () => {
               const optimalStock = material.optimal_stock_level || material.reorder_point! * 2;
               const quantityNeeded = Math.max(optimalStock - (material.current_stock || 0), 0);
               const estimatedCost = quantityNeeded * (material.cost_per_unit || 0);
-              
+
               return (
                 <Card key={material.id} className="border-amber-500/30 bg-amber-500/5">
                   <CardContent className="p-4">
@@ -861,17 +1035,17 @@ const PurchaseOrders = () => {
                 </Card>
               );
             })}
-            
+
             {rawMaterials?.filter(m => {
               if (!m.current_stock || !m.reorder_point) return false;
               return m.current_stock <= (m.reorder_point * 1.2);
             }).length === 0 && (
-              <div className="text-center py-8">
-                <CheckCircle className="h-12 w-12 mx-auto text-primary mb-4" />
-                <h3 className="font-medium">All stocked up!</h3>
-                <p className="text-muted-foreground">Your inventory levels look healthy</p>
-              </div>
-            )}
+                <div className="text-center py-8">
+                  <CheckCircle className="h-12 w-12 mx-auto text-primary mb-4" />
+                  <h3 className="font-medium">All stocked up!</h3>
+                  <p className="text-muted-foreground">Your inventory levels look healthy</p>
+                </div>
+              )}
           </div>
         </SheetContent>
       </Sheet>

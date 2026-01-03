@@ -3,11 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { TopNavBar } from "@/components/TopNavBar";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 import { VendorProvider } from "@/contexts/VendorContext";
-import { VerifiedVendorBadge } from "@/components/vendor/VerifiedVendorBadge";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -33,9 +33,9 @@ import Broadcasts from "./pages/Broadcasts";
 import CustomerConsents from "./pages/CustomerConsents";
 import VoiceHistory from "./pages/VoiceHistory";
 import VoiceSettings from "./pages/VoiceSettings";
+import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { LanguageSelector } from "@/components/LanguageSelector";
 import { VoiceCommandBridge } from "@/components/voice/VoiceCommandBridge";
 
 const queryClient = new QueryClient();
@@ -43,17 +43,19 @@ const queryClient = new QueryClient();
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => (
   <SidebarProvider>
     <div className="min-h-screen flex w-full">
+      {/* Tier 2: Compact Icon Sidebar (Left) */}
       <AppSidebar />
+
+      {/* Main content area */}
       <div className="flex-1 flex flex-col">
-<header className="h-14 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex items-center justify-between px-4">
-          <SidebarTrigger />
-          <div className="flex items-center gap-3">
-            <LanguageSelector />
-            <VerifiedVendorBadge size="sm" />
+        {/* Tier 1: Top Navigation Bar */}
+        <TopNavBar />
+
+        {/* Main content with proper margins for navigation */}
+        <main className="flex-1 mt-16 bg-gradient-to-b from-slate-50 to-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+            {children}
           </div>
-        </header>
-        <main className="flex-1">
-          {children}
         </main>
       </div>
     </div>
@@ -74,7 +76,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/vendor-onboarding" element={<VendorOnboarding />} />
-              
+
               {/* Protected routes with sidebar */}
               <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
               <Route path="/analytics" element={<ProtectedLayout><Analytics /></ProtectedLayout>} />
@@ -97,8 +99,9 @@ const App = () => (
               <Route path="/purchase-orders" element={<ProtectedLayout><PurchaseOrders /></ProtectedLayout>} />
               <Route path="/broadcasts" element={<ProtectedLayout><Broadcasts /></ProtectedLayout>} />
               <Route path="/customer-consents" element={<ProtectedLayout><CustomerConsents /></ProtectedLayout>} />
+              <Route path="/sales" element={<ProtectedLayout><Sales /></ProtectedLayout>} />
               <Route path="/settings/civic-integration" element={<ProtectedLayout><CivicIntegration /></ProtectedLayout>} />
-              
+
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
