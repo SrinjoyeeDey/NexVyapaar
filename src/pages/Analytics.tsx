@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { toast } from "sonner";
 import { InventoryBreakdown } from "@/components/InventoryBreakdown";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { isDemoMode } from "@/hooks/useDemoMode";
 
 const Analytics = () => {
   const { t } = useLanguage();
@@ -20,6 +21,14 @@ const Analytics = () => {
     toast.success(t.analytics.successLogout);
     navigate("/");
   };
+
+  // Demo mode check handled by ProtectedRoute
+  // useEffect(() => {
+  //   const token = localStorage.getItem("auth_token");
+  //   if (!token && !isDemoMode()) {
+  //     navigate("/auth");
+  //   }
+  // }, [navigate]);
 
   const handleFileUpload = (file: File) => {
     if (!file.name.endsWith('.csv')) {
@@ -70,12 +79,18 @@ const Analytics = () => {
 
   // Sample data for visualization
   const sampleData = uploadedData.length > 0 ? uploadedData.slice(0, 10) : [
-    { month: "Jan", sales: 4000, profit: 2400 },
-    { month: "Feb", sales: 3000, profit: 1398 },
-    { month: "Mar", sales: 2000, profit: 9800 },
-    { month: "Apr", sales: 2780, profit: 3908 },
-    { month: "May", sales: 1890, profit: 4800 },
-    { month: "Jun", sales: 2390, profit: 3800 },
+    { month: "Jan", sales: 42000, profit: 12500, customers: 120 },
+    { month: "Feb", sales: 38000, profit: 11000, customers: 110 },
+    { month: "Mar", sales: 45000, profit: 14000, customers: 145 },
+    { month: "Apr", sales: 48000, profit: 15500, customers: 160 },
+    { month: "May", sales: 52000, profit: 18000, customers: 180 },
+    { month: "Jun", sales: 58000, profit: 21000, customers: 210 },
+    { month: "Jul", sales: 62000, profit: 24000, customers: 230 },
+    { month: "Aug", sales: 59000, profit: 22000, customers: 215 },
+    { month: "Sep", sales: 65000, profit: 25000, customers: 250 },
+    { month: "Oct", sales: 85000, profit: 35000, customers: 320 }, // Festival Season
+    { month: "Nov", sales: 72000, profit: 28000, customers: 280 },
+    { month: "Dec", sales: 78000, profit: 31000, customers: 295 },
   ];
 
   return (
@@ -209,7 +224,7 @@ const Analytics = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="filter blur-sm pointer-events-none">
+                <div className={isDemoMode() ? "" : "filter blur-sm pointer-events-none"}>
                   <ResponsiveContainer width="100%" height={250}>
                     <LineChart data={sampleData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -221,11 +236,13 @@ const Analytics = () => {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Button onClick={() => navigate("/billing")} size="lg" className="shadow-lg">
-                    {t.analytics.upgrade}
-                  </Button>
-                </div>
+                {!isDemoMode() && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Button onClick={() => navigate("/billing")} size="lg" className="shadow-lg">
+                      {t.analytics.upgrade}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

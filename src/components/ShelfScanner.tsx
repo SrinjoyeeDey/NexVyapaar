@@ -31,6 +31,10 @@ import {
 import { toast } from 'sonner';
 import { VisionService, ShelfItem, ShelfDelta } from '@/services/VisionService';
 import { supabase } from '@/integrations/supabase/client';
+import { imageCacheService } from '@/services/ImageCacheService';
+import { networkAwarenessService } from '@/services/NetworkAwarenessService';
+import { progressiveUploadService } from '@/services/ProgressiveUploadService';
+import { userMessageService } from '@/services/UserMessageService';
 
 interface ShelfScannerProps {
     onComplete: (deltas: ShelfDelta[]) => void;
@@ -40,12 +44,27 @@ export const ShelfScanner: React.FC<ShelfScannerProps> = ({ onComplete }) => {
     const [isScanning, setIsScanning] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [deltas, setDeltas] = useState<ShelfDelta[]>([]);
-    const [scanStep, setScanStep] = useState<'idle' | 'scanning' | 'review'>('idle');
+    const [scanStep, setScanStep] = useState<'idle' | 'caching' | 'uploading' | 'scanning' | 'review'>('idle');
     const [previousSnapshot, setPreviousSnapshot] = useState<ShelfItem[] | null>(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [scanConfidence, setScanConfidence] = useState(1.0);
+    const [imageId, setImageId] = useState<string | null>(null);
+    const [networkQuality, setNetworkQuality] = useState(networkAwarenessService.getCurrentQuality());
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchLatestSnapshot();
+
+        // Monitor network quality
+        networkAwarenessService.startMonitoring(30000);
+        const unsubscribe = networkAwarenessService.subscribe((quality) => {
+            setNetworkQuality(quality);
+        });
+
+        return () => {
+            unsubscribe();
+            networkAwarenessService.stopMonitoring();
+        };
     }, []);
 
     const fetchLatestSnapshot = async () => {
@@ -69,23 +88,62 @@ export const ShelfScanner: React.FC<ShelfScannerProps> = ({ onComplete }) => {
         reader.onload = async (event) => {
             const base64 = event.target?.result as string;
             setPreviewUrl(base64);
-            processShelfImage(base64);
+            await processShelfImageResilient(base64);
         };
         reader.readAsDataURL(file);
     };
 
-    const processShelfImage = async (base64: string) => {
-        setIsScanning(true);
-        setScanStep('scanning');
-
+    const processShelfImageResilient = async (base64: string) => {
         try {
-            const result = await VisionService.analyzeShelfImage(base64);
+            // Step 1: Cache offline
+            setScanStep('caching');
+            const cached = await imageCacheService.cacheImage(base64, 'shelf');
+            setImageId(cached.id);
+            toast.success(userMessageService.formatMessage('imageCaptured'));
 
-            // If we have a previous snapshot, compare them
-            if (previousSnapshot) {
-                const calculatedDeltas = VisionService.compareScans(previousSnapshot, result.items);
+            // Step 2: Network-aware upload
+            const quality = networkAwarenessService.getCurrentQuality();
+            if (quality.recommendUpload) {
+                setScanStep('uploading');
+                setUploadProgress(0);
 
-                // Fetch reorder points for these items
+                const uploadResult = await progressiveUploadService.uploadImage(
+                    cached.id,
+                    (progress) => setUploadProgress(progress.percentage)
+                );
+
+                if (uploadResult.success) {
+                    toast.success(userMessageService.formatMessage('uploadComplete'));
+                } else if (!uploadResult.wasDuplicate) {
+                    await progressiveUploadService.queueUpload(cached.id);
+                    toast.info(userMessageService.formatMessage('uploadPending'));
+                }
+            } else {
+                await progressiveUploadService.queueUpload(cached.id);
+                toast.info(userMessageService.formatMessage('uploadPending'));
+            }
+
+            // Step 3: Analyze with enhanced confidence
+            setScanStep('scanning');
+            setIsScanning(true);
+
+            const result = await VisionService.analyzeShelfImageEnhanced(base64);
+            setScanConfidence(result.confidence);
+
+            await imageCacheService.updateScanStatus(
+                cached.id,
+                result.partialFailure ? 'failed' : 'completed',
+                result,
+                result.errorMessage
+            );
+
+            // Step 4: Calculate deltas with confidence
+            if (previousSnapshot && result.items.length > 0) {
+                const calculatedDeltas = VisionService.compareScanWithConfidence(
+                    previousSnapshot,
+                    result.items
+                );
+
                 const enrichedDeltas = await Promise.all(calculatedDeltas.map(async (delta) => {
                     const { data } = await (supabase as any)
                         .from('raw_materials')
@@ -93,15 +151,11 @@ export const ShelfScanner: React.FC<ShelfScannerProps> = ({ onComplete }) => {
                         .ilike('name', delta.name)
                         .maybeSingle();
 
-                    return {
-                        ...delta,
-                        reorderPoint: data?.reorder_point
-                    };
+                    return { ...delta, reorderPoint: data?.reorder_point };
                 }));
 
                 setDeltas(enrichedDeltas);
-            } else {
-                // First time scanning - all items are new or just current state
+            } else if (result.items.length > 0) {
                 const currentCounts = (VisionService as any).getCounts(result.items);
                 const initialDeltas = Object.entries(currentCounts).map(([name, count]) => ({
                     name,
@@ -109,21 +163,24 @@ export const ShelfScanner: React.FC<ShelfScannerProps> = ({ onComplete }) => {
                     currentCount: count as number,
                     delta: count as number,
                     action: 'restocked' as const,
-                    reason: 'sale' as const
+                    reason: 'sale' as const,
+                    confidence: 0.8
                 }));
                 setDeltas(initialDeltas);
             }
 
-            setScanStep('review');
-            toast.success("Shelf analysis complete! Detected " + result.items.length + " products.");
+            if (result.partialFailure) {
+                toast.warning(result.suggestedAction);
+            } else {
+                toast.success(result.suggestedAction);
+            }
 
-            // Temporarily store this as the "latest" for next time
-            // In a real app, this would happen AFTER confirmation
+            setScanStep('review');
             await saveSnapshot(result.items);
 
-        } catch (error) {
-            console.error('Shelf Scan Error:', error);
-            toast.error("Failed to analyze shelf image.");
+        } catch (error: any) {
+            console.error('Resilient shelf scan error:', error);
+            toast.error(userMessageService.formatMessage('scanFailed'));
             setScanStep('idle');
         } finally {
             setIsScanning(false);

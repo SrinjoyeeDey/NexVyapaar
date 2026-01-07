@@ -11,15 +11,227 @@ import {
     UserPlus,
     PlayCircle,
     LogIn,
-    Sparkles
+    Sparkles,
+    Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Hero = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
+
+    // DEMO LOGIC
+    const handleDemoMode = async () => {
+        setIsLoading(true);
+        try {
+            // 1. UNIQUE DEMO USER GENERATION (To avoid DB errors)
+            const timestamp = Date.now();
+            const email = `demo_${timestamp}@nexvyapaar.com`;
+            const password = `demo_${timestamp}`;
+
+            // 2. Register New User
+            const { data: authData, error: signUpError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        business_name: "NexVyapaar Demo Store",
+                        business_type: "retail",
+                        display_name: "Demo User"
+                    }
+                }
+            });
+
+            if (signUpError) throw signUpError;
+
+            // Wait for session
+            await new Promise(r => setTimeout(r, 1500));
+
+            // 3. Login (Just to be sure session is active)
+            const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+            if (loginError) throw loginError;
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("No user found");
+
+            // 4. SET DEMO FLAG & Initialize Demo Store
+            localStorage.setItem("demo_mode", "true");
+            localStorage.setItem("demo_user_id", user.id);
+
+            // Import demo store
+            const { demoStore } = await import("@/lib/demoStore");
+            demoStore.setUserId(user.id);
+            demoStore.clear(); // Clear any old data
+
+            // 5. SEED DATA (User Requested "Scanned" Scenario)
+            const today = new Date();
+            const daysAgo = (days: number) => { const d = new Date(today); d.setDate(d.getDate() - days); return d.toISOString(); };
+            const daysFuture = (days: number) => { const d = new Date(today); d.setDate(d.getDate() + days); return d.toISOString(); };
+
+            // A. INVENTORY (Specific "Extracted Data" from User)
+            const inventoryItems = [
+                // 1. Amul Gold Milk (High Volume, Daily Essential)
+                { name: "Amul Gold Milk", stock: 50, expiry: daysFuture(2), category: "Dairy", price: 33, cost: 30, stock_alert: 10, unit: "packets" },
+
+                // 2. Harvest Bread (Fast Moving)
+                { name: "Harvest Bread", stock: 20, expiry: daysFuture(5), category: "Bakery", price: 45, cost: 38, stock_alert: 5, unit: "units" },
+
+                // 3. Kissan Jam (Low Stock - Needs Restock!)
+                { name: "Kissan Jam", stock: 5, expiry: daysFuture(180), category: "Groceries", price: 150, cost: 120, stock_alert: 8, unit: "jars" },
+
+                // Filling out the store offering for realism...
+                { name: "Fortune Basmati Rice (5kg)", stock: 15, expiry: daysFuture(180), category: "Groceries", price: 650, cost: 500, stock_alert: 5, unit: "bags" },
+                { name: "Tata Salt (1kg)", stock: 40, expiry: daysFuture(365), category: "Groceries", price: 28, cost: 20, stock_alert: 10, unit: "packets" },
+                { name: "Maggi Noodles (Family Pack)", stock: 30, expiry: daysFuture(120), category: "Snacks", price: 90, cost: 75, stock_alert: 10, unit: "packs" }
+            ];
+
+            for (const item of inventoryItems) {
+                const materialData = {
+                    user_id: user.id,
+                    name: item.name,
+                    current_stock: item.stock,
+                    expiry_date: item.expiry,
+                    batch_number: "DEMO-" + Math.floor(Math.random() * 10000),
+                    unit: item.unit,
+                    category: item.category,
+                    cost_per_unit: item.cost,
+                    selling_price: item.price,
+                    reorder_point: item.stock_alert,
+                };
+
+                // Insert to Supabase
+                await supabase.from("raw_materials").insert(materialData as any);
+
+                // Also add to demo store
+                demoStore.addRawMaterial(materialData);
+            }
+
+            // B. SALES DATA (Simulate history for these specific items)
+            const salesEntries = [];
+            for (let i = 0; i < 30; i++) {
+                const date = daysAgo(i);
+                // Weekend spikes
+                const isWeekend = new Date(date).getDay() % 6 === 0;
+                const dailyOrders = Math.floor(Math.random() * (isWeekend ? 8 : 4)) + 2;
+
+                for (let j = 0; j < dailyOrders; j++) {
+                    const item = inventoryItems[Math.floor(Math.random() * inventoryItems.length)];
+                    const qty = Math.floor(Math.random() * 2) + 1;
+                    salesEntries.push({
+                        user_id: user.id,
+                        product_name: item.name,
+                        quantity: qty,
+                        total_price: item.price * qty,
+                        sale_date: date,
+                        payment_method: Math.random() > 0.3 ? 'upi' : 'cash',
+                        profit: (item.price - item.cost) * qty
+                    });
+                }
+            }
+            await supabase.from("sales_data").insert(salesEntries as any);
+
+            // C. SUPPLIERS (Matched to items)
+            const { data: supplierData } = await supabase.from("suppliers").insert([
+                { user_id: user.id, name: "Amul Distributors", contact_person: "Rajesh Kumar", phone: "9876500001", email: "orders@amul.com", delivery_time_days: 1, payment_terms: "Daily" },
+                { user_id: user.id, name: "Local Bakery House", contact_person: "Uncle John", phone: "9876500002", email: "bakery@local.com", delivery_time_days: 2, payment_terms: "Cash" },
+                { user_id: user.id, name: "Hindustan Unilever Dist.", contact_person: "Mr. Mehta", phone: "9876500003", email: "sales@hul.com", delivery_time_days: 7, payment_terms: "Net 30" }
+            ] as any).select();
+
+            if (supplierData) {
+                // D. PURCHASE ORDERS (Story: Low Stock Alert for Jam)
+                const grocerSupplier = supplierData.find(s => s.name?.includes("Unilever"))?.id || supplierData[0].id;
+
+                await supabase.from("purchase_orders").insert([
+                    { user_id: user.id, supplier_id: grocerSupplier, po_number: "PO-AUTO-001", status: "pending", total_amount: 3000, order_date: daysAgo(0), expected_delivery_date: daysFuture(2), notes: "Restocking Kissan Jam (Critical Low) + Sauces" },
+                ] as any);
+            }
+
+            // E. MARKETING (Promoting the Bread/Jam combo)
+            await supabase.from("marketing_campaigns").insert([
+                { user_id: user.id, campaign_name: "Breakfast Combo", content_type: "whatsapp", status: "active", schedule_time: daysAgo(0), generated_content: "Good Morning! ☀️ Fresh Harvest Bread + Kissan Jam available. Start your day right! 🍞🍓" },
+                { user_id: user.id, campaign_name: "Weekend Special", content_type: "sns", status: "scheduled", schedule_time: daysFuture(2), generated_content: "Special offer on Amul Gold Milk this weekend! Buy 2 get ₹5 off." }
+            ] as any);
+
+            // F. INSIGHTS 
+            await supabase.from("customer_feedback").insert([
+                { user_id: user.id, customer_name: "Priya", feedback_text: "Amul milk was fresh today, thanks.", sentiment: "positive", rating: 5, feedback_date: daysAgo(1) },
+                { user_id: user.id, customer_name: "Amit", feedback_text: "Do you have mixed fruit jam? Only saw mango.", sentiment: "neutral", rating: 3, feedback_date: daysAgo(3) }
+            ] as any);
+
+            // G. TRANSACTIONS (NEW - For Transactions Tab)
+            await supabase.from("transactions").insert([
+                { user_id: user.id, amount: 15000, currency: "INR", payment_gateway: "razorpay", transaction_id: "TXN_88282828", status: "completed", subscription_type: "premium", created_at: daysAgo(5) },
+                { user_id: user.id, amount: 450, currency: "INR", payment_gateway: "upi", transaction_id: "UPI_9921212", status: "completed", created_at: daysAgo(1) },
+                { user_id: user.id, amount: 1200, currency: "INR", payment_gateway: "stripe", transaction_id: "STR_112233", status: "failed", created_at: daysAgo(3) }
+            ] as any);
+
+            // H. VOICE HISTORY (For Voice Commands Page)
+            const { error: voiceError } = await supabase.from("voice_command_history" as any).insert([
+                { user_id: user.id, command_text: "Restock 50 packets of Amul Milk", detected_intent: "restock_inventory", confidence_score: 0.98, status: "executed", created_at: daysAgo(0) },
+                { user_id: user.id, command_text: "Aaj ka total sales batao", detected_intent: "analytics_query", confidence_score: 0.95, status: "executed", created_at: daysAgo(1) },
+                { user_id: user.id, command_text: "Add new supplier Sharma Ji", detected_intent: "add_supplier", confidence_score: 0.88, status: "pending", created_at: daysAgo(2) }
+            ]);
+
+            if (voiceError) {
+                console.log("Voice history table missing or error, skipping.");
+            }
+
+            // I. COMMUNITY POSTS (For Community Tab)
+            await supabase.from("community_posts").insert([
+                { user_id: user.id, title: "Market Association Meeting", content: "All shopkeepers are requested to attend the meeting on Sunday at 10 AM regarding new parking rules.", category: "announcement", status: "published", likes_count: 12, comments_count: 4, created_at: daysAgo(1) },
+                { user_id: user.id, title: "Wholesale Rate for Sugar?", content: "Is anyone getting sugar below ₹38/kg? My supplier increased rates.", category: "discussion", status: "published", likes_count: 5, comments_count: 8, created_at: daysAgo(3) }
+            ] as any);
+
+            // J. LOW STOCK ALERTS (For Inventory Restock Section)
+            // Get the IDs of items we just created to link alerts properly
+            const { data: createdItems } = await supabase
+                .from("raw_materials")
+                .select("id, name, current_stock, reorder_point")
+                .eq("user_id", user.id);
+
+            if (createdItems && createdItems.length > 0) {
+                const lowStockAlerts = [];
+
+                // Create alerts for items below reorder point
+                for (const item of createdItems) {
+                    if (item.current_stock && item.reorder_point && item.current_stock <= item.reorder_point) {
+                        lowStockAlerts.push({
+                            user_id: user.id,
+                            material_id: item.id,
+                            alert_type: "low_stock",
+                            message: `${item.name} is running low! Current: ${item.current_stock}, Reorder at: ${item.reorder_point}`,
+                            current_value: item.current_stock,
+                            threshold_value: item.reorder_point,
+                            is_acknowledged: false,
+                            created_at: daysAgo(0)
+                        });
+                    }
+                }
+
+                if (lowStockAlerts.length > 0) {
+                    await supabase.from("low_stock_alerts").insert(lowStockAlerts as any);
+                }
+            }
+
+
+            toast.success("Welcome to the Future! 🚀", { duration: 3000 });
+            navigate('/dashboard');
+
+        } catch (error: any) {
+            console.error("Demo Error:", error);
+            // FALLBACK: If Supabase fails, force entry anyway (Client-side only mode)
+            localStorage.setItem("demo_mode", "true");
+            toast.error("Network issue, entering offline demo mode.");
+            navigate('/dashboard');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleMouseMove = (e: React.MouseEvent) => {
         const { clientX, clientY } = e;
@@ -167,11 +379,12 @@ const Hero = () => {
                             Login
                         </button>
                         <button
-                            onClick={() => navigate('/dashboard')}
+                            onClick={handleDemoMode}
+                            disabled={isLoading}
                             className="flex items-center gap-3 px-8 py-5 text-slate-700 rounded-[2rem] font-black text-xl hover:text-indigo-600 transition-all hover:bg-white/50"
                         >
-                            <PlayCircle size={20} />
-                            Demo
+                            {isLoading ? <Loader2 className="animate-spin" size={20} /> : <PlayCircle size={20} />}
+                            {isLoading ? "Setting up..." : "Demo Mode 🚀"}
                         </button>
                     </motion.div>
 

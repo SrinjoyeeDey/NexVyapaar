@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { demoStore } from "@/lib/demoStore";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,8 +56,28 @@ import {
   AlertTriangle,
   Scan,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+
+// Hardcoded demo data
+// Hardcoded demo data
+const DEMO_PURCHASE_ORDERS = [
+  { id: "po1", po_number: "PO-001", supplier_id: "s3", status: "pending", total_amount: 15000, order_date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), expected_delivery_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(), notes: "Restocking Kissan Jam (Critical Low) + Sauces", suppliers: { name: "Hindustan Unilever Dist." }, created_at: new Date().toISOString() },
+  { id: "po2", po_number: "PO-002", supplier_id: "s1", status: "delivered", total_amount: 5000, order_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), expected_delivery_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), notes: "Weekly milk supply", suppliers: { name: "Metro Cash & Carry" }, created_at: new Date().toISOString() },
+  { id: "po3", po_number: "PO-003", supplier_id: "s2", status: "sent", total_amount: 2500, order_date: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(), expected_delivery_date: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), notes: "Emergency Bread Supply", suppliers: { name: "Local Bakery House" }, created_at: new Date().toISOString() },
+  { id: "po4", po_number: "PO-004", supplier_id: "s4", status: "cancelled", total_amount: 12000, order_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(), expected_delivery_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8).toISOString(), notes: "Stock issue", suppliers: { name: "ITC Limited (Direct)" }, created_at: new Date().toISOString() },
+  { id: "po5", po_number: "PO-005", supplier_id: "s5", status: "draft", total_amount: 8000, order_date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), expected_delivery_date: null, notes: "Diwali Special Stock Planning", suppliers: { name: "Amul Distributors" }, created_at: new Date().toISOString() },
+];
+
+const DEMO_SUPPLIERS = [
+  { id: "s1", name: "Metro Cash & Carry", delivery_time_days: 1, email: "metro@example.com" },
+  { id: "s2", name: "Local Bakery House", delivery_time_days: 0, email: "bakery@example.com" },
+  { id: "s3", name: "Hindustan Unilever Dist.", delivery_time_days: 2, email: "hul@example.com" },
+  { id: "s4", name: "ITC Limited (Direct)", delivery_time_days: 3, email: "itc@example.com" },
+  { id: "s5", name: "Amul Distributors", delivery_time_days: 1, email: "amul@example.com" },
+];
 import { KhataScanner } from "@/components/KhataScanner";
 import { KhataItem } from "@/services/VisionService";
 
@@ -115,13 +137,15 @@ const PurchaseOrders = () => {
   const [notes, setNotes] = useState("");
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
-  // Check auth
+  // Check auth - REMOVED for Demo Mode compatibility
+  /*
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       navigate('/auth');
     }
   }, [navigate]);
+  */
 
   // Real-time subscriptions
   useEffect(() => {
@@ -144,25 +168,53 @@ const PurchaseOrders = () => {
     };
   }, [queryClient]);
 
-  // Fetch suppliers
+  // Fetch suppliers for dropdown
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers'],
     queryFn: async () => {
-      let { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user ?? null;
+      // Demo mode: use hardcoded data
+      if (isDemoMode()) {
+        return DEMO_SUPPLIERS;
       }
+
+      // Real mode: use Supabase
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
         .from('suppliers')
-        .select('id, name, delivery_time_days, email')
+        .select('*')
         .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
-      return data as Supplier[];
+      return data;
+    }
+  });
+
+  // Fetch purchase orders
+  const { data: purchaseOrders, isLoading: loadingOrders } = useQuery({
+    queryKey: ['purchase-orders'],
+    queryFn: async () => {
+      // Demo mode: use hardcoded data
+      if (isDemoMode()) {
+        return DEMO_PURCHASE_ORDERS;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from('purchase_orders')
+        .select(`
+          *,
+          suppliers (name)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
     }
   });
 
@@ -170,11 +222,7 @@ const PurchaseOrders = () => {
   const { data: rawMaterials } = useQuery({
     queryKey: ['raw-materials'],
     queryFn: async () => {
-      let { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user ?? null;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -188,36 +236,10 @@ const PurchaseOrders = () => {
     }
   });
 
-  // Fetch purchase orders
-  const { data: purchaseOrders, isLoading } = useQuery({
-    queryKey: ['purchase-orders'],
-    queryFn: async () => {
-      let { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user ?? null;
-      }
-      if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from('purchase_orders')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as PurchaseOrder[];
-    }
-  });
-
   // Create PO mutation
   const createPOMutation = useMutation({
     mutationFn: async () => {
-      let { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user ?? null;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const supplier = suppliers?.find(s => s.id === selectedSupplier);
@@ -651,7 +673,7 @@ const PurchaseOrders = () => {
           <CardDescription>{t.purchaseOrders.allOrdersDesc}</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {loadingOrders ? (
             <div className="text-center py-8 text-muted-foreground">{t.common.loading || "Loading..."}</div>
           ) : purchaseOrders && purchaseOrders.length > 0 ? (
             <Table>

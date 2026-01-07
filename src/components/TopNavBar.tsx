@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useOfflineDemo } from "@/contexts/OfflineDemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { NexVyapaarIcon } from "@/components/NexVyapaarIcon";
 import { Home, Search, Bell, Mic, Radio, User, LayoutDashboard, Package, ShoppingCart, Megaphone, Menu, X, LogOut } from "lucide-react";
@@ -22,6 +23,7 @@ import { motion } from "framer-motion";
 export function TopNavBar() {
     const { t } = useLanguage();
     const navigate = useNavigate();
+    const { toggleOffline, isOffline } = useOfflineDemo();
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -134,6 +136,19 @@ export function TopNavBar() {
                         >
                             <Search className="h-5 w-5" />
                         </Button>
+
+                        {/* DEMO: Offline Toggle */}
+                        {!isOffline && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="hidden lg:flex text-xs border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:text-yellow-800"
+                                onClick={toggleOffline}
+                            >
+                                <span className="mr-2">⚡</span>
+                                Go Offline
+                            </Button>
+                        )}
 
                         {/* Notifications */}
                         <div className="hidden sm:block">

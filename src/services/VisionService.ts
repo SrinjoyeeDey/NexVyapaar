@@ -1,9 +1,15 @@
 import * as jose from 'jose';
+import { toast } from "sonner";
+import credentialsData from '../../AIVision.json';
 
-// Load Service Account JSON (in a real app, this should be handled securely on the backend)
-// For this demo, we use the provided credentials to demonstrate immediate functionality
-import credentials from '../../abp-mirgated-8f78aa899c88.json';
+// Load actual Google Cloud Vision API credentials
+const credentials = {
+    client_email: credentialsData.client_email,
+    private_key_id: credentialsData.private_key_id,
+    private_key: credentialsData.private_key
+};
 
+// Enhanced interfaces with confidence scoring
 export interface KhataItem {
     name: string;
     quantity: number;
@@ -13,6 +19,8 @@ export interface KhataItem {
     expiry_date?: string;
     type: 'sale' | 'inventory';
     supplier?: string;
+    confidence?: number; // 0-1 confidence score
+    requiresReview?: boolean; // Needs manual confirmation
 }
 
 export interface ShelfItem {
@@ -25,11 +33,14 @@ export interface ShelfItem {
     expiryDate?: string;
     labelDetected: boolean;
     rawLabel?: string;
+    requiresReview?: boolean;
 }
 
 export interface ShelfScanResult {
     items: ShelfItem[];
     timestamp: string;
+    overallConfidence?: number; // Overall scan confidence
+    partialFailure?: boolean;
 }
 
 export interface ShelfDelta {
@@ -42,7 +53,25 @@ export interface ShelfDelta {
     price?: number;
     expiryDate?: string;
     reorderPoint?: number;
+    confidence?: number;
 }
+
+// New result interface for enhanced resilience
+export interface VisionResult<T> {
+    items: T[];
+    confidence: number; // 0-1
+    needsConfirmation: boolean;
+    suggestedAction: string;
+    partialFailure: boolean;
+    errorMessage?: string;
+}
+
+// Configuration for confidence thresholds
+export const CONFIDENCE_THRESHOLDS = {
+    HIGH: 0.7, // Above this = auto-accept
+    MEDIUM: 0.5, // Medium confidence
+    LOW: 0.3, // Below medium
+};
 
 export class VisionService {
     private static async getAccessToken(): Promise<string> {
@@ -76,94 +105,227 @@ export class VisionService {
     }
 
     public static async analyzeHandwriting(base64Image: string): Promise<KhataItem[]> {
-        const accessToken = await this.getAccessToken();
-        const content = base64Image.replace(/^data:image\/(png|jpg|jpeg);base64,/, '');
+        // CHECK FOR DEMO MODE FIRST
+        const demoMode = localStorage.getItem("demo_mode");
 
-        const response = await fetch('https://vision.googleapis.com/v1/images:annotate', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                requests: [
-                    {
+        if (demoMode === "true") {
+            // DEMO MODE: Return reliable hardcoded data for hackathon presentations
+            console.log("VisionService: Demo Mode Active - Using sample data for presentation");
+
+            // Simulate API delay for realistic demo experience
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            return [
+                {
+                    name: "Amul Gold Milk",
+                    quantity: 50,
+                    unit: "packets",
+                    price: 33,
+                    date: new Date().toISOString().split('T')[0],
+                    expiry_date: "2025-06-30",
+                    type: 'inventory',
+                    supplier: "Demo Supplier"
+                },
+                {
+                    name: "Harvest Bread",
+                    quantity: 20,
+                    unit: "units",
+                    price: 45,
+                    date: new Date().toISOString().split('T')[0],
+                    expiry_date: "2025-01-10",
+                    type: 'inventory'
+                },
+                {
+                    name: "Kissan Jam",
+                    quantity: 5,
+                    unit: "jars",
+                    price: 150,
+                    date: new Date().toISOString().split('T')[0],
+                    expiry_date: "2025-06-20",
+                    type: 'inventory'
+                }
+            ];
+        }
+
+        // PRODUCTION MODE: Use real Google Cloud Vision API
+        console.log("VisionService: Production Mode - Calling Google Cloud Vision API");
+
+        try {
+            const accessToken = await this.getAccessToken();
+            const content = base64Image.replace(/^data:image\/(png|jpg|jpeg);base64,/, '');
+
+            const response = await fetch('https://vision.googleapis.com/v1/images:annotate', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    requests: [{
                         image: { content },
-                        features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
-                        imageContext: {
-                            languageHints: ['en', 'hi'],
-                        },
-                    },
-                ],
-            }),
-        });
+                        features: [{ type: 'TEXT_DETECTION' }]
+                    }]
+                })
+            });
 
-        const data = await response.json();
-        const fullText = data.responses[0]?.fullTextAnnotation?.text || '';
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Google Vision API Error Response (Handwriting):', errorData);
+                throw new Error(`Google Vision API error: ${response.statusText}${errorData.error?.message ? ' - ' + errorData.error.message : ''}`);
+            }
 
-        return this.parseKhataText(fullText);
+            const data = await response.json();
+
+            if (data.error) {
+                console.error('Vision API returned top-level error:', data.error);
+                throw new Error(`Vision API Error: ${data.error.message || 'Unknown error'}`);
+            }
+
+            const text = data.responses[0]?.fullTextAnnotation?.text || '';
+
+            if (!text) {
+                console.warn("No text detected in image");
+                toast.warning("No text found in the image. Please try a clearer photo.");
+                return [];
+            }
+
+            return this.parseKhataText(text);
+        } catch (error) {
+            console.error("Vision API Error:", error);
+            // Fallback to empty result with toast instead of throwing
+            if (error instanceof Error) {
+                toast.error(`Vision API Error: ${error.message}. Checking internet or credentials.`);
+            } else {
+                toast.error('Failed to process image. Please try again.');
+            }
+            return []; // Return empty array so UI doesn't crash
+        }
     }
 
     public static async analyzeShelfImage(base64Image: string): Promise<ShelfScanResult> {
-        const accessToken = await this.getAccessToken();
-        const content = base64Image.replace(/^data:image\/(png|jpg|jpeg);base64,/, '');
+        // Check for demo mode
+        const demoMode = localStorage.getItem("demo_mode") === "true";
 
-        const response = await fetch('https://vision.googleapis.com/v1/images:annotate', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                requests: [
+        if (demoMode) {
+            console.log("VisionService: Demo Mode - Returning mock shelf scan data");
+            // Return demo shelf items
+            return {
+                items: [
                     {
-                        image: { content },
-                        features: [
-                            { type: 'OBJECT_LOCALIZATION' },
-                            { type: 'TEXT_DETECTION' }
-                        ],
+                        name: "Maggi Noodles",
+                        boundingBox: { normalizedVertices: [{ x: 0.1, y: 0.1 }, { x: 0.3, y: 0.1 }, { x: 0.3, y: 0.3 }, { x: 0.1, y: 0.3 }] },
+                        confidence: 0.95,
+                        labelDetected: true,
+                        rawLabel: "Maggi ₹12"
                     },
+                    {
+                        name: "Lays Chips",
+                        boundingBox: { normalizedVertices: [{ x: 0.4, y: 0.1 }, { x: 0.6, y: 0.1 }, { x: 0.6, y: 0.3 }, { x: 0.4, y: 0.3 }] },
+                        confidence: 0.92,
+                        labelDetected: true,
+                        rawLabel: "Lays ₹20"
+                    },
+                    {
+                        name: "Coca Cola",
+                        boundingBox: { normalizedVertices: [{ x: 0.7, y: 0.1 }, { x: 0.9, y: 0.1 }, { x: 0.9, y: 0.3 }, { x: 0.7, y: 0.3 }] },
+                        confidence: 0.88,
+                        labelDetected: true,
+                        rawLabel: "Coca Cola ₹40"
+                    },
+                    {
+                        name: "Parle-G",
+                        boundingBox: { normalizedVertices: [{ x: 0.1, y: 0.4 }, { x: 0.3, y: 0.4 }, { x: 0.3, y: 0.6 }, { x: 0.1, y: 0.6 }] },
+                        confidence: 0.93,
+                        labelDetected: true,
+                        rawLabel: "Parle-G ₹10"
+                    }
                 ],
-            }),
-        });
+                timestamp: new Date().toISOString()
+            };
+        }
 
-        const data = await response.json();
-        const visionResponse = data.responses[0];
+        // PRODUCTION MODE: Use real Google Cloud Vision API with error handling
+        console.log("VisionService: Production Mode - Calling Google Cloud Vision API for shelf analysis");
 
-        const localizedObjects = visionResponse.localizedObjectAnnotations || [];
-        const textAnnotations = visionResponse.textAnnotations || [];
+        try {
+            const accessToken = await this.getAccessToken();
+            const content = base64Image.replace(/^data:image\/(png|jpg|jpeg);base64,/, '');
 
-        // Logical Step: Association
-        // We link text labels (price, name) to objects based on spatial proximity
-        const shelfItems: ShelfItem[] = localizedObjects.map((obj: any) => {
-            const box = obj.boundingPoly.normalizedVertices;
+            const response = await fetch('https://vision.googleapis.com/v1/images:annotate', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    requests: [
+                        {
+                            image: { content },
+                            features: [
+                                { type: 'OBJECT_LOCALIZATION' },
+                                { type: 'TEXT_DETECTION' }
+                            ],
+                        },
+                    ],
+                }),
+            });
 
-            // Find text that falls within or near this box
-            const associatedText = textAnnotations.find((text: any) => {
-                const textVertices = text.boundingPoly.normalizedVertices;
-                if (!textVertices) return false;
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Google Vision API Error Response:', errorData);
+                throw new Error(`Google Vision API error: ${response.statusText}${errorData.error?.message ? ' - ' + errorData.error.message : ''}`);
+            }
 
-                // Simple check: is the first vertex of the text inside the object box?
-                const center = this.getPolygonCenter(box);
-                const textCenter = this.getPolygonCenter(textVertices);
+            const data = await response.json();
+            const visionResponse = data.responses[0];
 
-                const dist = Math.sqrt(Math.pow(center.x - textCenter.x, 2) + Math.pow(center.y - textCenter.y, 2));
-                return dist < 0.1; // Threshold for proximity
+            if (visionResponse.error) {
+                console.error('Vision API returned error:', visionResponse.error);
+                throw new Error(`Vision API Error: ${visionResponse.error.message || 'Unknown error'}`);
+            }
+
+            const localizedObjects = visionResponse.localizedObjectAnnotations || [];
+            const textAnnotations = visionResponse.textAnnotations || [];
+
+            // Logical Step: Association
+            // We link text labels (price, name) to objects based on spatial proximity
+            const shelfItems: ShelfItem[] = localizedObjects.map((obj: any) => {
+                const box = obj.boundingPoly.normalizedVertices;
+
+                // Find text that falls within or near this box
+                const associatedText = textAnnotations.find((text: any) => {
+                    const textVertices = text.boundingPoly.normalizedVertices;
+                    if (!textVertices) return false;
+
+                    // Simple check: is the first vertex of the text inside the object box?
+                    const center = this.getPolygonCenter(box);
+                    const textCenter = this.getPolygonCenter(textVertices);
+
+                    const dist = Math.sqrt(Math.pow(center.x - textCenter.x, 2) + Math.pow(center.y - textCenter.y, 2));
+                    return dist < 0.1; // Threshold for proximity
+                });
+
+                return {
+                    name: associatedText?.description || obj.name,
+                    boundingBox: { normalizedVertices: box },
+                    confidence: obj.score,
+                    labelDetected: !!associatedText,
+                    rawLabel: associatedText?.description
+                };
             });
 
             return {
-                name: associatedText?.description || obj.name,
-                boundingBox: { normalizedVertices: box },
-                confidence: obj.score,
-                labelDetected: !!associatedText,
-                rawLabel: associatedText?.description
+                items: shelfItems,
+                timestamp: new Date().toISOString()
             };
-        });
-
-        return {
-            items: shelfItems,
-            timestamp: new Date().toISOString()
-        };
+        } catch (error) {
+            console.error("Shelf Vision API Error:", error);
+            // Provide user-friendly error message
+            if (error instanceof Error) {
+                throw new Error(`Failed to analyze shelf image: ${error.message}. Please check your internet connection and Google Cloud Vision API credentials.`);
+            }
+            throw new Error('Failed to analyze shelf image. Please try again.');
+        }
     }
 
     public static compareScans(previous: ShelfItem[], current: ShelfItem[]): ShelfDelta[] {
@@ -337,4 +499,176 @@ export class VisionService {
             !/^\d+(st|nd|rd|th)?\s+[a-z]+/i.test(item.name)
         );
     }
+
+    /**
+     * Enhanced handwriting analysis with confidence scoring and graceful degradation
+     */
+    public static async analyzeHandwritingEnhanced(base64Image: string): Promise<VisionResult<KhataItem>> {
+        try {
+            const items = await this.analyzeHandwriting(base64Image);
+
+            // Calculate overall confidence
+            const itemsWithConfidence = items.map(item => {
+                // Calculate item confidence based on completeness
+                let confidence = 1.0;
+
+                // Reduce confidence if critical fields are missing or questionable
+                if (!item.name || item.name === 'Unknown Item') confidence *= 0.5;
+                if (item.price === 0) confidence *= 0.7;
+                if (item.quantity === 0) confidence *= 0.7;
+                if (!item.unit || item.unit === 'unit') confidence *= 0.9;
+
+                // Name quality checks
+                if (item.name.length < 3) confidence *= 0.6;
+                if (/^\d+/.test(item.name)) confidence *= 0.5; // Starts with number
+
+                item.confidence = confidence;
+                item.requiresReview = confidence < CONFIDENCE_THRESHOLDS.HIGH;
+
+                return item;
+            });
+
+            const overallConfidence = itemsWithConfidence.length > 0
+                ? itemsWithConfidence.reduce((sum, item) => sum + (item.confidence || 0), 0) / itemsWithConfidence.length
+                : 0;
+
+            const needsConfirmation = overallConfidence < CONFIDENCE_THRESHOLDS.HIGH;
+
+            let suggestedAction = '';
+            if (overallConfidence >= CONFIDENCE_THRESHOLDS.HIGH) {
+                suggestedAction = `स्कैन पूर्ण ✓ / Scan complete ✓`;
+            } else if (overallConfidence >= CONFIDENCE_THRESHOLDS.MEDIUM) {
+                suggestedAction = `कृपया जांचें: / Please confirm:`;
+            } else {
+                suggestedAction = `स्कैन अधूरा। मैन्युअल एंट्री उपलब्ध। / Scan incomplete. Manual entry available.`;
+            }
+
+            return {
+                items: itemsWithConfidence,
+                confidence: overallConfidence,
+                needsConfirmation,
+                suggestedAction,
+                partialFailure: items.length === 0 || overallConfidence < CONFIDENCE_THRESHOLDS.LOW,
+            };
+        } catch (error: any) {
+            // Graceful degradation: return empty result instead of throwing
+            console.error('Enhanced vision analysis error:', error);
+
+            return {
+                items: [],
+                confidence: 0,
+                needsConfirmation: true,
+                suggestedAction: 'स्कैन विफल। मैन्युअल एंट्री करें। / Scan failed. Please enter manually.',
+                partialFailure: true,
+                errorMessage: error.message || 'Analysis failed',
+            };
+        }
+    }
+
+    /**
+     * Enhanced shelf analysis with confidence scoring
+     */
+    public static async analyzeShelfImageEnhanced(base64Image: string): Promise<VisionResult<ShelfItem>> {
+        try {
+            const result = await this.analyzeShelfImage(base64Image);
+
+            // Add requiresReview flag to items with low confidence
+            const enhancedItems = result.items.map(item => ({
+                ...item,
+                requiresReview: item.confidence < CONFIDENCE_THRESHOLDS.HIGH,
+            }));
+
+            const overallConfidence = enhancedItems.length > 0
+                ? enhancedItems.reduce((sum, item) => sum + item.confidence, 0) / enhancedItems.length
+                : 0;
+
+            const needsConfirmation = overallConfidence < CONFIDENCE_THRESHOLDS.HIGH;
+
+            let suggestedAction = '';
+            if (overallConfidence >= CONFIDENCE_THRESHOLDS.HIGH) {
+                suggestedAction = `स्कैन पूर्ण ✓ / Scan complete ✓`;
+            } else if (overallConfidence >= CONFIDENCE_THRESHOLDS.MEDIUM) {
+                suggestedAction = `कृपया जांचें: / Please confirm:`;
+            } else {
+                suggestedAction = `स्कैन अधूरा। मैन्युअल एंट्री उपलब्ध। / Scan incomplete. Manual entry available.`;
+            }
+
+            return {
+                items: enhancedItems,
+                confidence: overallConfidence,
+                needsConfirmation,
+                suggestedAction,
+                partialFailure: enhancedItems.length === 0,
+            };
+        } catch (error: any) {
+            console.error('Enhanced shelf analysis error:', error);
+
+            return {
+                items: [],
+                confidence: 0,
+                needsConfirmation: true,
+                suggestedAction: 'स्कैन विफल। मैन्युअल एंट्री करें। / Scan failed. Please enter manually.',
+                partialFailure: true,
+                errorMessage: error.message || 'Analysis failed',
+            };
+        }
+    }
+
+    /**
+     * Partial failure recovery - extract what's possible from failed scan
+     */
+    public static parseFallbackData(text: string): KhataItem[] {
+        try {
+            // Try to extract at least item names even if other fields fail
+            const lines = text.split('\\n').filter(l => l.trim().length > 2);
+            const fallbackItems: KhataItem[] = [];
+
+            lines.forEach(line => {
+                // Very basic extraction: assume each line might be an item
+                const cleaned = line.trim();
+                if (cleaned.length > 2 && !/^\\d+$/.test(cleaned)) {
+                    fallbackItems.push({
+                        name: cleaned.substring(0, 50), // Limit name length
+                        quantity: 1,
+                        unit: 'unit',
+                        price: 0,
+                        date: new Date().toISOString().split('T')[0],
+                        type: 'inventory',
+                        confidence: 0.3,
+                        requiresReview: true,
+                    });
+                }
+            });
+
+            return fallbackItems;
+        } catch (error) {
+            console.error('Fallback parsing failed:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Calculate confidence for shelf deltas
+     */
+    public static compareScanWithConfidence(
+        previous: ShelfItem[],
+        current: ShelfItem[]
+    ): ShelfDelta[] {
+        const deltas = this.compareScans(previous, current);
+
+        // Add confidence scoring to deltas
+        return deltas.map(delta => {
+            // Find matching items in current scan
+            const currentItems = current.filter(item => item.name === delta.name);
+            const avgConfidence = currentItems.length > 0
+                ? currentItems.reduce((sum, item) => sum + item.confidence, 0) / currentItems.length
+                : 0.5;
+
+            return {
+                ...delta,
+                confidence: avgConfidence,
+            };
+        });
+    }
 }
+

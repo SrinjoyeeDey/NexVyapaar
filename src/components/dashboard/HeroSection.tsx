@@ -7,11 +7,33 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { KhataScanner } from "@/components/KhataScanner";
 import { KhataItem } from "@/services/VisionService";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function HeroSection() {
     const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Fetch user profile to get actual name
+    const { data: profile } = useQuery({
+        queryKey: ['user-profile'],
+        queryFn: async () => {
+            const demoMode = localStorage.getItem("demo_mode");
+            if (demoMode === "true") {
+                return { display_name: "Srinjoyee", business_name: "Demo Store" };
+            }
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return { display_name: "Srinjoyee", business_name: "Demo Store" };
+
+            const { data } = await supabase
+                .from('profiles')
+                .select('display_name, business_name')
+                .eq('id', user.id)
+                .single();
+
+            return data || { display_name: user.email?.split('@')[0] || "User", business_name: "Your Store" };
+        }
+    });
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -113,6 +135,8 @@ export function HeroSection() {
         toast.success(`Hero Scan: ${processedCount} items synced!`);
     };
 
+    const userName = profile?.display_name || "Srinjoyee";
+
     return (
         <motion.div
             variants={fadeInUp}
@@ -125,7 +149,7 @@ export function HeroSection() {
                 {/* Welcome Message */}
                 <div>
                     <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-2 flex items-center gap-3">
-                        Welcome back, Rajesh!
+                        Welcome back, {userName}!
                         <motion.span
                             animate={{ rotate: [0, 14, -8, 14, -4, 10, 0] }}
                             transition={{

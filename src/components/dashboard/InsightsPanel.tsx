@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
     AlertTriangle,
     TrendingUp,
@@ -13,6 +14,7 @@ interface InsightCard {
     title: string;
     description: string;
     action: string;
+    path: string;
 }
 
 const mockInsights: InsightCard[] = [
@@ -22,6 +24,7 @@ const mockInsights: InsightCard[] = [
         title: "Low stock alert",
         description: "5 items running low. Restock soon to avoid stockouts.",
         action: "View Items",
+        path: "/inventory"
     },
     {
         type: "OPPORTUNITY",
@@ -29,6 +32,7 @@ const mockInsights: InsightCard[] = [
         title: "Peak sales time detected",
         description: "Launch a campaign between 2-4 PM for 30% higher engagement.",
         action: "Create Campaign",
+        path: "/marketing"
     },
     {
         type: "DOING_WELL",
@@ -36,6 +40,7 @@ const mockInsights: InsightCard[] = [
         title: "Great month!",
         description: "You're 85% ahead of your monthly target. Keep it up!",
         action: "View Report",
+        path: "/analytics"
     },
     {
         type: "PREDICTION",
@@ -43,6 +48,7 @@ const mockInsights: InsightCard[] = [
         title: "Demand forecast",
         description: "Coffee sales likely to increase 20% next week based on trends.",
         action: "Prepare Stock",
+        path: "/purchase-orders"
     },
 ];
 
@@ -74,6 +80,8 @@ const insightStyles = {
 };
 
 export function InsightsPanel() {
+    const navigate = useNavigate();
+
     return (
         <div className="bg-gradient-to-b from-indigo-50 to-transparent rounded-2xl p-6 border border-indigo-100">
             {/* Header */}
@@ -126,7 +134,10 @@ export function InsightsPanel() {
                                     </p>
 
                                     {/* Action Button */}
-                                    <button className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 group">
+                                    <button
+                                        onClick={() => navigate(insight.path)}
+                                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 group"
+                                    >
                                         {insight.action}
                                         <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                                     </button>
@@ -138,7 +149,10 @@ export function InsightsPanel() {
             </div>
 
             {/* View All Button */}
-            <button className="w-full mt-4 px-4 py-2 border-2 border-indigo-200 text-indigo-600 rounded-xl font-medium text-sm hover:bg-indigo-50 transition-colors duration-200 flex items-center justify-center gap-2">
+            <button
+                onClick={() => navigate("/insights")}
+                className="w-full mt-4 px-4 py-2 border-2 border-indigo-200 text-indigo-600 rounded-xl font-medium text-sm hover:bg-indigo-50 transition-colors duration-200 flex items-center justify-center gap-2"
+            >
                 View All Insights
                 <ArrowRight className="h-4 w-4" />
             </button>

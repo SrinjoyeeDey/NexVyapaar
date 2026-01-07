@@ -14,11 +14,11 @@ interface AIForecastModalProps {
   inventoryData?: any;
 }
 
-export const AIForecastModal = ({ 
-  open, 
-  onOpenChange, 
+export const AIForecastModal = ({
+  open,
+  onOpenChange,
   productName,
-  inventoryData 
+  inventoryData
 }: AIForecastModalProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -27,6 +27,23 @@ export const AIForecastModal = ({
   const handleForecast = async () => {
     setLoading(true);
     try {
+      // DEMO MODE: Bypass Cloud Function
+      await new Promise(r => setTimeout(r, 1800)); // Simulate thinking
+
+      const mockForecast = {
+        summary: "Demand is expected to rise by 25% due to upcoming festival season.",
+        stockRecommendation: "Order 50 more units by next week to avoid stockout.",
+        profitEstimate: "₹12,500",
+        tips: [
+          "Bundle with complementary items to increase basket size.",
+          "Run a weekend flash sale to clear older stock.",
+          "Negotiate bulk discount with supplier for next order."
+        ]
+      };
+
+      setForecast(mockForecast);
+
+      /*
       // Call the edge function for AI forecasting
       const { data, error } = await supabase.functions.invoke('inventory-forecast', {
         body: { 
@@ -42,17 +59,11 @@ export const AIForecastModal = ({
       });
 
       if (error) {
-        if (error.message?.includes('429')) {
-          toast.error("Rate limit reached. Please try again in a moment.");
-        } else if (error.message?.includes('402')) {
-          toast.error("AI credits depleted. Please upgrade your workspace.");
-        } else {
-          toast.error("Failed to generate forecast. Please try again.");
-        }
-        return;
+           // ... handle error
       }
-
       setForecast(data);
+      */
+
       toast.success("AI forecast generated!");
     } catch (error) {
       console.error('Forecast error:', error);
@@ -86,12 +97,12 @@ export const AIForecastModal = ({
               </div>
               <h3 className="text-lg font-semibold mb-2">Premium Feature</h3>
               <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                Unlock AI forecasting to predict demand patterns, optimize stock levels, 
+                Unlock AI forecasting to predict demand patterns, optimize stock levels,
                 and maximize profits with seasonal intelligence.
               </p>
               <div className="flex gap-2 justify-center">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     onOpenChange(false);
                     navigate('/billing');

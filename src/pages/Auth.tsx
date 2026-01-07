@@ -1,58 +1,114 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Lock, Mail } from "lucide-react";
+import { Building2, Lock, Mail, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Default redirect path
+  const from = location.state?.from?.pathname || "/dashboard";
+
+  // NEW: Demo Mode Handler (preserves existing demo functionality)
+  const handleDemoMode = () => {
+    localStorage.setItem("demo_mode", "true");
+    localStorage.setItem("auth_token", "demo_token"); // Keep for compatibility
+    toast.success("Demo Mode Activated! 🎬");
+    navigate(from, { replace: true });
+  };
+
+  // UPDATED: Real Login Handler with Supabase
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    // Simulate login
-    setTimeout(() => {
-      if (email && password) {
-        localStorage.setItem("auth_token", "demo_token");
-        toast.success("Welcome back!");
-        navigate("/dashboard");
-      } else {
-        toast.error("Please enter valid credentials");
-      }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      // Clear demo mode flags
+      localStorage.removeItem("demo_mode");
+      localStorage.removeItem("auth_token");
+
+      toast.success("Welcome back!");
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.message || "Invalid credentials");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
+  // UPDATED: Real Signup Handler with Supabase
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const businessName = formData.get("businessName") as string;
 
-    // Simulate signup
-    setTimeout(() => {
-      if (email && password && businessName) {
-        localStorage.setItem("auth_token", "demo_token");
-        toast.success("Account created! Welcome to NexVyapaar 🎉");
-        navigate("/dashboard");
-      } else {
-        toast.error("Please fill all fields");
+    try {
+      // Create Supabase auth user
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            business_name: businessName,
+            display_name: businessName,
+          }
+        }
+      });
+
+      if (signUpError) throw signUpError;
+      if (!authData.user) throw new Error("Failed to create user");
+
+      // Create profile entry in profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          business_name: businessName,
+          business_type: 'other',
+          display_name: businessName
+        });
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        // Non-critical - continue anyway
       }
+
+      // Clear demo mode flags
+      localStorage.removeItem("demo_mode");
+      localStorage.removeItem("auth_token");
+
+      toast.success("Account created! Welcome to NexVyapaar 🎉");
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      toast.error(error.message || "Registration failed. Please try again.");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -67,7 +123,7 @@ const Auth = () => {
           <h1 className="text-3xl font-display font-bold gradient-text mb-2">
             NexVyapaar
           </h1>
-        <p className="text-muted-foreground">
+          <p className="text-muted-foreground">
             Empowering small businesses with AI-driven insights
           </p>
         </div>
@@ -116,8 +172,8 @@ const Auth = () => {
                       />
                     </div>
                   </div>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full bg-primary hover:bg-primary-hover"
                     disabled={isLoading}
                   >
@@ -179,8 +235,8 @@ const Auth = () => {
                       />
                     </div>
                   </div>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full bg-primary hover:bg-primary-hover"
                     disabled={isLoading}
                   >
@@ -191,6 +247,22 @@ const Auth = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Demo Mode Button - For Hackathon Presentations */}
+        <div className="mt-6 pt-6 border-t">
+          <Button
+            onClick={handleDemoMode}
+            variant="outline"
+            className="w-full gap-2 border-2 border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5"
+            type="button"
+          >
+            <Sparkles className="w-4 h-4" />
+            Continue as Demo (Hackathon Mode)
+          </Button>
+          <p className="text-xs text-center text-muted-foreground mt-2">
+            Try all features with sample data. No account needed.
+          </p>
+        </div>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           By continuing, you agree to our Terms & Privacy Policy

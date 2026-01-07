@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Target, 
-  LogOut, 
+import {
+  Target,
+  LogOut,
   Search,
   TrendingUp,
   TrendingDown,
@@ -16,6 +16,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from "recharts";
 
 const CompetitorAnalysis = () => {
@@ -25,9 +26,16 @@ const CompetitorAnalysis = () => {
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
+  // Auto-fill for demo
+  useEffect(() => {
+    if (isDemoMode()) {
+      setCompetitor("Mart 24/7 (Local Competitor)");
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!token) {
+    if (!token && !isDemoMode()) {
       navigate("/auth");
     }
   }, [navigate]);
@@ -48,6 +56,8 @@ const CompetitorAnalysis = () => {
       description: "AI is gathering competitive intelligence"
     });
 
+    const delay = isDemoMode() ? 1500 : 3000; // Faster in demo
+
     setTimeout(() => {
       setLoading(false);
       setShowResults(true);
@@ -55,7 +65,7 @@ const CompetitorAnalysis = () => {
         title: "Analysis Complete! ✅",
         description: "Found key insights about your competitor"
       });
-    }, 3000);
+    }, delay);
   };
 
   const handleLogout = () => {
@@ -125,8 +135,8 @@ const CompetitorAnalysis = () => {
                 onChange={(e) => setCompetitor(e.target.value)}
                 className="flex-1"
               />
-              <Button 
-                onClick={handleAnalyze} 
+              <Button
+                onClick={handleAnalyze}
                 disabled={loading}
                 className="gap-2"
               >

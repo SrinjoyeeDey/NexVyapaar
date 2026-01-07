@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { demoStore } from "@/lib/demoStore";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,10 +56,30 @@ import {
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { InventoryCSVImport } from "@/components/InventoryCSVImport";
+import { SmartRestockUpload } from "@/components/inventory/SmartRestockUpload";
 import { SupplierPriceHistory } from "@/components/SupplierPriceHistory";
 import { KhataScanner } from "@/components/KhataScanner";
 import { ShelfScanner } from "@/components/ShelfScanner";
 import { KhataItem, ShelfDelta } from "@/services/VisionService";
+
+// Hardcoded demo data for instant display
+const DEMO_RAW_MATERIALS = [
+  { id: "1", name: "Amul Gold Milk", category: "Dairy", current_stock: 50, unit: "packets", reorder_point: 10, optimal_stock_level: 80, burn_rate: 5, cost_per_unit: 30, expiry_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(), batch_number: "DEMO-1001", selling_price: 33, supplier_id: null, seasonality_tag: 'year_round' },
+  { id: "2", name: "Harvest Bread", category: "Bakery", current_stock: 20, unit: "units", reorder_point: 5, optimal_stock_level: 30, burn_rate: 3, cost_per_unit: 38, expiry_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString(), batch_number: "DEMO-1002", selling_price: 45, supplier_id: null, seasonality_tag: 'year_round' },
+  { id: "3", name: "Kissan Jam", category: "Groceries", current_stock: 5, unit: "jars", reorder_point: 8, optimal_stock_level: 20, burn_rate: 1, cost_per_unit: 120, expiry_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 180).toISOString(), batch_number: "DEMO-1003", selling_price: 150, supplier_id: null, seasonality_tag: 'year_round' },
+  { id: "4", name: "Fortune Basmati Rice (5kg)", category: "Groceries", current_stock: 15, unit: "bags", reorder_point: 5, optimal_stock_level: 25, burn_rate: 2, cost_per_unit: 500, expiry_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 180).toISOString(), batch_number: "DEMO-1004", selling_price: 650, supplier_id: null, seasonality_tag: 'year_round' },
+  { id: "5", name: "Tata Salt (1kg)", category: "Groceries", current_stock: 40, unit: "packets", reorder_point: 10, optimal_stock_level: 50, burn_rate: 4, cost_per_unit: 20, expiry_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(), batch_number: "DEMO-1005", selling_price: 28, supplier_id: null, seasonality_tag: 'year_round' },
+  { id: "6", name: "Maggi Noodles (Family Pack)", category: "Snacks", current_stock: 30, unit: "packs", reorder_point: 10, optimal_stock_level: 40, burn_rate: 3, cost_per_unit: 75, expiry_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 120).toISOString(), batch_number: "DEMO-1006", selling_price: 90, supplier_id: null, seasonality_tag: 'year_round' },
+];
+
+const DEMO_FINISHED_PRODUCTS = [
+  { id: "fp1", name: "Fresh Sandwich", category: "Ready-to-Eat", current_stock: 12, selling_price: 80, cost_to_produce: 50, reorder_point: 5 },
+  { id: "fp2", name: "Masala Chai", category: "Beverages", current_stock: 25, selling_price: 20, cost_to_produce: 10, reorder_point: 10 },
+];
+
+const DEMO_LOW_STOCK_ALERTS = [
+  { id: "alert1", material_id: "3", message: "Kissan Jam is running low! Current: 5, Reorder at: 8", alert_type: "low_stock", current_value: 5, threshold_value: 8, is_acknowledged: false, created_at: new Date().toISOString() },
+];
 
 interface RawMaterial {
   id: string;
@@ -105,6 +127,7 @@ const Inventory = () => {
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [smartUploadOpen, setSmartUploadOpen] = useState(false);
   const [priceHistoryOpen, setPriceHistoryOpen] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | undefined>();
   const [selectedMaterialName, setSelectedMaterialName] = useState<string | undefined>();
@@ -134,61 +157,26 @@ const Inventory = () => {
     reorder_point: ""
   });
 
-  // Check auth
+  // Check auth - REMOVED for Demo Mode compatibility (ProtectedLayout handles this)
+  /* 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       navigate('/auth');
     }
   }, [navigate]);
-
-  // Real-time subscriptions for inventory updates
-  useEffect(() => {
-    const channel = supabase
-      .channel('inventory-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'raw_materials' },
-        (payload) => {
-          console.log('Raw materials change:', payload);
-          queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
-          if (payload.eventType === 'UPDATE') {
-            toast.info('Stock level updated in real-time');
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'finished_products' },
-        (payload) => {
-          console.log('Finished products change:', payload);
-          queryClient.invalidateQueries({ queryKey: ['finished-products'] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'low_stock_alerts' },
-        (payload) => {
-          console.log('New low stock alert:', payload);
-          queryClient.invalidateQueries({ queryKey: ['low-stock-alerts'] });
-          toast.warning('New low stock alert!', {
-            description: (payload.new as any)?.message
-          });
-        }
-      )
-      .subscribe((status) => {
-        setIsRealtimeConnected(status === 'SUBSCRIBED');
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  */
 
   // Fetch raw materials
   const { data: rawMaterials, isLoading: loadingMaterials } = useQuery({
     queryKey: ['raw-materials'],
     queryFn: async () => {
+      // Demo mode: use hardcoded data
+      if (isDemoMode()) {
+        return DEMO_RAW_MATERIALS as RawMaterial[];
+      }
+
+      // Real mode: use Supabase
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -207,6 +195,11 @@ const Inventory = () => {
   const { data: finishedProducts, isLoading: loadingProducts } = useQuery({
     queryKey: ['finished-products'],
     queryFn: async () => {
+      // Demo mode: use hardcoded data
+      if (isDemoMode()) {
+        return DEMO_FINISHED_PRODUCTS as FinishedProduct[];
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -225,6 +218,12 @@ const Inventory = () => {
   const { data: alerts, isLoading: loadingAlerts } = useQuery({
     queryKey: ['low-stock-alerts'],
     queryFn: async () => {
+      // Demo mode: use hardcoded data
+      if (isDemoMode()) {
+        return DEMO_LOW_STOCK_ALERTS as LowStockAlert[];
+      }
+
+      // Real mode: use Supabase
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -243,6 +242,23 @@ const Inventory = () => {
   // Add raw material mutation
   const addMaterialMutation = useMutation({
     mutationFn: async (material: typeof materialForm) => {
+      // Demo mode: use demo store
+      if (isDemoMode()) {
+        demoStore.addRawMaterial({
+          name: material.name,
+          category: material.category || null,
+          current_stock: parseFloat(material.current_stock) || 0,
+          unit: material.unit,
+          reorder_point: parseFloat(material.reorder_point) || null,
+          optimal_stock_level: parseFloat(material.optimal_stock_level) || null,
+          burn_rate: parseFloat(material.burn_rate) || null,
+          cost_per_unit: parseFloat(material.cost_per_unit) || null,
+          seasonality_tag: material.seasonality_tag
+        });
+        return;
+      }
+
+      // Real mode: use Supabase
       let { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         const { data: { session } } = await supabase.auth.getSession();
@@ -316,6 +332,13 @@ const Inventory = () => {
   // Acknowledge alert mutation
   const acknowledgeAlertMutation = useMutation({
     mutationFn: async (alertId: string) => {
+      // Demo mode: use demo store
+      if (isDemoMode()) {
+        demoStore.acknowledgeAlert(alertId);
+        return;
+      }
+
+      // Real mode: use Supabase
       let { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         const { data: { session } } = await supabase.auth.getSession();
@@ -339,6 +362,13 @@ const Inventory = () => {
   // Delete material mutation
   const deleteMaterialMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Demo mode: use demo store
+      if (isDemoMode()) {
+        demoStore.deleteRawMaterial(id);
+        return;
+      }
+
+      // Real mode: use Supabase
       let { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         const { data: { session } } = await supabase.auth.getSession();
@@ -360,6 +390,15 @@ const Inventory = () => {
   });
 
   const handleKhataData = async (items: KhataItem[]) => {
+    // 0. Check for Demo Mode FIRST
+    if (isDemoMode()) {
+      toast.success("Demo Mode: Inventory updated from scan");
+      if (items.some(i => i.supplier)) {
+        toast.success("Demo Mode: Purchase Order created automatically");
+      }
+      return;
+    }
+
     let { data: { user } } = await supabase.auth.getUser();
 
     // Fallback to session if getUser fails
@@ -389,12 +428,17 @@ const Inventory = () => {
         let supplierId = null;
 
         if (firstSupplierName) {
+          // Use maybeSingle and be safe about ID format
           const { data: sData } = await supabase
             .from('suppliers')
             .select('id')
-            .ilike('name', `% ${firstSupplierName}% `)
+            .ilike('name', `%${firstSupplierName}%`)
             .maybeSingle();
-          supplierId = sData?.id;
+
+          // Ensure it's a valid UUID if we found one
+          if (sData?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sData.id)) {
+            supplierId = sData.id;
+          }
         }
 
         // Create PO Header
@@ -402,7 +446,7 @@ const Inventory = () => {
           .from('purchase_orders')
           .insert({
             user_id: user.id,
-            po_number: `SCAN - ${Date.now().toString(36).toUpperCase()} `,
+            po_number: `SCAN-${Date.now().toString(36).toUpperCase()}`,
             status: 'confirmed', // Automatically mark as confirmed since we have the data
             total_amount: inventoryItems.reduce((sum, i) => sum + (i.price * i.quantity), 0),
             notes: 'Created via Khata Scan',
@@ -733,6 +777,17 @@ const Inventory = () => {
             <Upload className="h-4 w-4 mr-2" />
             {t.inventory.importCSV}
           </Button>
+          <Dialog open={smartUploadOpen} onOpenChange={setSmartUploadOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-orange-600 hover:bg-orange-700 text-white">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Smart Restock
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl bg-transparent border-0 shadow-none p-0">
+              <SmartRestockUpload />
+            </DialogContent>
+          </Dialog>
           <Dialog open={khataScannerOpen} onOpenChange={setKhataScannerOpen}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-200">
@@ -1028,6 +1083,7 @@ const Inventory = () => {
                       <TableHead>{t.inventory.material}</TableHead>
                       <TableHead>{t.nav.category || "Category"}</TableHead>
                       <TableHead>{t.inventory.stockLevel}</TableHead>
+                      <TableHead>Expiry</TableHead>
                       <TableHead>{t.common.status}</TableHead>
                       <TableHead>{t.inventory.burnRate}</TableHead>
                       <TableHead>Weekly Trend</TableHead>

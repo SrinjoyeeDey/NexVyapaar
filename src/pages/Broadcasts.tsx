@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { isDemoMode } from "@/hooks/useDemoMode";
 import BroadcastComposer from '@/components/broadcast/BroadcastComposer';
 import {
   Megaphone,
@@ -86,8 +87,45 @@ const Broadcasts = () => {
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!user && !isDemoMode()) {
         // User not logged in - show empty state instead of redirecting
+        setIsLoading(false);
+        return;
+      }
+
+      if (isDemoMode()) {
+        setBroadcasts([
+          {
+            id: "1",
+            subject: "Diwali Mega Sale!",
+            message_type: "offer",
+            content: "Get 50% off on all sweets this Diwali. Visit now!",
+            channels: ["whatsapp", "sms"],
+            status: "sent",
+            recipients_count: 500,
+            delivered_count: 480,
+            opened_count: 350,
+            clicked_count: 120,
+            sent_at: new Date().toISOString(),
+            scheduled_at: null,
+            created_at: new Date().toISOString()
+          },
+          {
+            id: "2",
+            subject: "New Stock Alert: Rice & Pulses",
+            message_type: "update",
+            content: "Fresh stock of Basmati Rice has arrived.",
+            channels: ["whatsapp"],
+            status: "sent",
+            recipients_count: 200,
+            delivered_count: 198,
+            opened_count: 150,
+            clicked_count: 40,
+            sent_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+            scheduled_at: null,
+            created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+          }
+        ]);
         setIsLoading(false);
         return;
       }
@@ -211,7 +249,7 @@ const Broadcasts = () => {
             <div className="flex-1">
               <h4 className="font-medium text-blue-700 dark:text-blue-400">Civic-Verified Broadcasting Impact</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Civic enables verified, consent-based communication without spam. With verified customer IDs, 
+                Civic enables verified, consent-based communication without spam. With verified customer IDs,
                 businesses see dramatic improvements in engagement.
               </p>
               <div className="flex flex-wrap gap-4 mt-3">
@@ -427,7 +465,7 @@ const Broadcasts = () => {
                               <Archive className="h-4 w-4 mr-2" />
                               Archive
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => handleDelete(broadcast.id)}
                             >

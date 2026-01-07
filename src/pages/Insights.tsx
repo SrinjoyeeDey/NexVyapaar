@@ -22,23 +22,26 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isDemoMode } from "@/hooks/useDemoMode";
 
 const Insights = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isPremium] = useState(false); // Check from profiles.subscription_tier
+  const [isPremium] = useState(isDemoMode()); // Enable premium in demo mode
   const [reviewText, setReviewText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [sentiment, setSentiment] = useState<any>(null);
   const [generatingContent, setGeneratingContent] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string>("");
 
+  /*
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!token) {
+    if (!token && !isDemoMode()) {
       navigate("/auth");
     }
   }, [navigate]);
+  */
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -57,16 +60,32 @@ const Insights = () => {
 
     setAnalyzing(true);
     try {
+      // DEMO MODE: Bypass Cloud Function
+      await new Promise(r => setTimeout(r, 1500));
+
+      const mockSentiment = {
+        overall: "positive",
+        score: 0.92,
+        emotions: [
+          { name: "Joy", value: 75 },
+          { name: "Trust", value: 15 },
+          { name: "Anticipation", value: 10 }
+        ]
+      };
+
+      setSentiment(mockSentiment);
+
+      /*
       const { data, error } = await supabase.functions.invoke('analyze-sentiment', {
         body: { text: reviewText }
       });
-
       if (error) throw error;
-
       setSentiment(data.sentiment);
+      */
+
       toast({
         title: "Analysis Complete! 🎯",
-        description: `Sentiment: ${data.sentiment.overall}`
+        description: `Sentiment: ${mockSentiment.overall}`
       });
     } catch (error) {
       console.error('Error analyzing sentiment:', error);
@@ -136,7 +155,7 @@ const Insights = () => {
 
   const PremiumGate = ({ children, feature }: { children: React.ReactNode, feature: string }) => {
     if (isPremium) return <>{children}</>;
-    
+
     return (
       <div className="relative">
         <div className="blur-sm pointer-events-none">{children}</div>
@@ -206,8 +225,8 @@ const Insights = () => {
                 rows={4}
                 className="mb-4"
               />
-              <Button 
-                onClick={analyzeSentiment} 
+              <Button
+                onClick={analyzeSentiment}
                 disabled={analyzing}
                 className="gap-2"
               >
@@ -315,14 +334,14 @@ const Insights = () => {
                   <ResponsiveContainer width="100%" height={250}>
                     <RadarChart data={churnRiskData}>
                       <PolarGrid stroke="hsl(var(--border))" />
-                      <PolarAngleAxis 
-                        dataKey="metric" 
+                      <PolarAngleAxis
+                        dataKey="metric"
                         tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                       />
-                      <Radar 
-                        dataKey="value" 
-                        stroke="hsl(38 92% 50%)" 
-                        fill="hsl(38 92% 50%)" 
+                      <Radar
+                        dataKey="value"
+                        stroke="hsl(38 92% 50%)"
+                        fill="hsl(38 92% 50%)"
                         fillOpacity={0.3}
                       />
                     </RadarChart>
@@ -355,8 +374,8 @@ const Insights = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-auto py-6 flex-col gap-2"
                   onClick={() => generateContent("social")}
                   disabled={generatingContent}
@@ -365,8 +384,8 @@ const Insights = () => {
                   <span className="font-semibold">Social Posts</span>
                   <span className="text-xs text-muted-foreground">Instagram, Facebook captions</span>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-auto py-6 flex-col gap-2"
                   onClick={() => generateContent("email")}
                   disabled={generatingContent}
@@ -375,8 +394,8 @@ const Insights = () => {
                   <span className="font-semibold">Email Campaigns</span>
                   <span className="text-xs text-muted-foreground">Newsletters, promotions</span>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-auto py-6 flex-col gap-2"
                   onClick={() => generateContent("ad")}
                   disabled={generatingContent}
@@ -394,9 +413,9 @@ const Insights = () => {
                     Generated Content
                   </h4>
                   <p className="text-sm whitespace-pre-wrap">{generatedContent}</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="mt-3"
                     onClick={() => {
                       navigator.clipboard.writeText(generatedContent);

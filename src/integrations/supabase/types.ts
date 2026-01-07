@@ -798,11 +798,12 @@ export type Database = {
       raw_materials: {
         Row: {
           burn_rate: number | null
+          expiry_date: string | null
+          batch_number: string | null
           category: string | null
           cost_per_unit: number | null
           created_at: string | null
           current_stock: number | null
-          expiry_date: string | null
           id: string
           last_ordered_at: string | null
           name: string
@@ -897,6 +898,8 @@ export type Database = {
           price: number
           product_name: string
           quantity: number
+          expiry_date: string | null
+          batch_number: string | null
           sale_date: string
           seasonality_tag: string | null
           user_id: string
@@ -925,6 +928,8 @@ export type Database = {
           price?: number
           product_name?: string
           quantity?: number
+          expiry_date?: string | null
+          batch_number?: string | null
           sale_date?: string
           seasonality_tag?: string | null
           user_id?: string

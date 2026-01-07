@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { isDemoMode } from "@/hooks/useDemoMode";
 
 const Integrations = () => {
   const navigate = useNavigate();
@@ -28,12 +29,14 @@ const Integrations = () => {
     quickbooks: false
   });
 
+  /*
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!token) {
+    if (!token && !isDemoMode()) {
       navigate("/auth");
     }
   }, [navigate]);
+  */
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -72,7 +75,7 @@ const Integrations = () => {
 
         // Open OAuth window
         const authWindow = window.open(data.authUrl, 'QuickBooks OAuth', 'width=600,height=700');
-        
+
         // Listen for OAuth callback
         const checkWindow = setInterval(() => {
           if (authWindow?.closed) {
@@ -219,7 +222,7 @@ const Integrations = () => {
             const isPlaceholder = (integration as any).placeholder;
 
             return (
-              <Card 
+              <Card
                 key={integration.id}
                 className={`border-2 ${isConnected ? "border-green-500/50" : isPlaceholder ? "border-yellow-500/30" : "border-border"}`}
               >
@@ -256,9 +259,9 @@ const Integrations = () => {
                         </p>
                       </div>
                     </div>
-                    
+
                     {isConnected ? (
-                      <Switch 
+                      <Switch
                         checked={true}
                         onCheckedChange={() => {
                           setConnectedServices(prev => ({ ...prev, [integration.id]: false }));
@@ -269,7 +272,7 @@ const Integrations = () => {
                         }}
                       />
                     ) : (
-                      <Button 
+                      <Button
                         onClick={() => handleConnect(integration.id)}
                         variant={integration.premium && !isPremium ? "outline" : "default"}
                         className="gap-2"

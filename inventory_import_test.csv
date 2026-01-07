@@ -1,0 +1,9 @@
+name,category,current_stock,unit,cost_per_unit,reorder_point,optimal_stock_level,burn_rate,seasonality,type,selling_price,expiry_date
+Premium Basmati Rice,grains,500,kg,85,50,1000,20,year_round,raw_material,,2025-12-31
+Organic Brown Sugar,bakery,50,kg,65,10,100,5,year_round,raw_material,,2026-06-30
+Arabica Coffee Beans,beverages,20,kg,900,5,40,2,year_round,raw_material,,2025-08-15
+Almond Milk,dairy,30,liters,120,5,50,3,year_round,raw_material,,2024-12-20
+Spicy Chicken Burger,meat,0,pieces,80,5,20,5,year_round,finished_product,199,2024-05-25
+Mango Lassi,beverages,0,cups,25,10,50,15,summer_peak,finished_product,80,2024-05-20
+Masala Chai Premix,beverages,100,packets,20,20,200,10,monsoon_demand,finished_product,50,2025-01-10
+Garlic Naan,bakery,0,pieces,10,5,30,8,year_round,finished_product,45,2024-05-25

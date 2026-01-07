@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { 
-  GraduationCap, 
-  Clock, 
-  BookOpen, 
+import {
+  GraduationCap,
+  Clock,
+  BookOpen,
   CheckCircle2,
   Search,
   TrendingUp,
@@ -35,6 +35,8 @@ interface CourseProgress {
   progress_percentage: number;
 }
 
+import { isDemoMode } from "@/hooks/useDemoMode";
+
 const Academy = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -46,7 +48,7 @@ const Academy = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!token) {
+    if (!token && !isDemoMode()) {
       navigate("/auth");
       return;
     }
@@ -55,6 +57,47 @@ const Academy = () => {
 
   const loadCourses = async () => {
     try {
+      if (isDemoMode()) {
+        setCourses([
+          {
+            id: "1",
+            title: "Digital Marketing 101",
+            description: "Learn how to promote your shop on WhatsApp and Facebook.",
+            category: "marketing",
+            difficulty: "beginner",
+            duration_minutes: 45,
+            thumbnail_url: null,
+            content: "Demo content"
+          },
+          {
+            id: "2",
+            title: "Inventory Management Mastery",
+            description: "Reduce waste and optimize your stock levels.",
+            category: "operations",
+            difficulty: "intermediate",
+            duration_minutes: 60,
+            thumbnail_url: null,
+            content: "Demo content"
+          },
+          {
+            id: "3",
+            title: "Customer Retention Strategies",
+            description: "Turn one-time buyers into loyal customers.",
+            category: "sales",
+            difficulty: "advanced",
+            duration_minutes: 30,
+            thumbnail_url: null,
+            content: "Demo content"
+          }
+        ]);
+        setProgress({
+          "1": { course_id: "1", completed: true, progress_percentage: 100 },
+          "2": { course_id: "2", completed: false, progress_percentage: 45 }
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data: coursesData, error: coursesError } = await supabase
         .from("courses")
         .select("*")
@@ -67,7 +110,7 @@ const Academy = () => {
         .select("*");
 
       setCourses(coursesData || []);
-      
+
       const progressMap: Record<string, CourseProgress> = {};
       progressData?.forEach(p => {
         progressMap[p.course_id] = p;
@@ -137,7 +180,7 @@ const Academy = () => {
   const categories = ["all", ...new Set(courses.map(c => c.category))];
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         course.description.toLowerCase().includes(searchQuery.toLowerCase());
+      course.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "all" || course.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -232,8 +275,8 @@ const Academy = () => {
                 <Card key={course.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="aspect-video bg-gradient-to-br from-primary/10 to-accent/10 relative">
                     {course.thumbnail_url ? (
-                      <img 
-                        src={course.thumbnail_url} 
+                      <img
+                        src={course.thumbnail_url}
                         alt={course.title}
                         className="w-full h-full object-cover"
                       />

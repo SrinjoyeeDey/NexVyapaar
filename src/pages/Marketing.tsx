@@ -8,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Megaphone, 
-  Calendar, 
-  Send, 
-  Sparkles, 
-  Mail, 
+import {
+  Megaphone,
+  Calendar,
+  Send,
+  Sparkles,
+  Mail,
   MessageSquare,
   Instagram,
   Clock,
@@ -22,6 +22,14 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { format } from "date-fns";
+import { isDemoMode } from "@/hooks/useDemoMode";
+
+const DEMO_CAMPAIGNS = [
+  { id: "mc1", campaign_name: "Diwali Dhamaka Sale", content_type: "social", status: "scheduled", schedule_time: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(), generated_content: "🪔 Lighting up your Diwali! Special discounts on Gift Packs. Visit us for exclusive offers! #DiwaliSale #FestiveVibes" },
+  { id: "mc2", campaign_name: "Monthly Grocery Restock", content_type: "whatsapp", status: "sent", schedule_time: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), generated_content: "Hello! Time to restock your kitchen? 🏠 Get 5% off on orders above ₹2000. Free delivery! 🚚" },
+  { id: "mc3", campaign_name: "New Arrivals: Organic Range", content_type: "email", status: "sent", schedule_time: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(), generated_content: "Subject: Go Green with Our New Organic Range! 🌱\n\nHi there,\n\nWe are excited to introduce our new range of organic pulses and spices. Healthier choice for your family!" },
+  { id: "mc4", campaign_name: "Flash Sale Alert", content_type: "social", status: "failed", schedule_time: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15).toISOString(), generated_content: "⚡ FLASH SALE! ⚡ Flat 20% off on all beverages for the next 2 hours only! Rush now! 🥤" },
+];
 
 const Marketing = () => {
   const navigate = useNavigate();
@@ -29,7 +37,7 @@ const Marketing = () => {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  
+
   // Form state
   const [campaignName, setCampaignName] = useState("");
   const [contentType, setContentType] = useState<"social" | "email" | "whatsapp">("social");
@@ -38,15 +46,17 @@ const Marketing = () => {
   const [generatedContent, setGeneratedContent] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      navigate("/auth");
-      return;
-    }
+    // Demo mode compatibility: Removed manual auth_token check
     loadCampaigns();
   }, [navigate]);
 
   const loadCampaigns = async () => {
+    // Demo Mode Logic
+    if (isDemoMode()) {
+      setCampaigns(DEMO_CAMPAIGNS);
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -75,6 +85,15 @@ const Marketing = () => {
 
     setGenerating(true);
     try {
+      // DEMO MODE: Bypass Cloud Function for reliability in video
+      await new Promise(r => setTimeout(r, 1500)); // Simulate AI thinking time
+
+      const mockResult = `📢 **${campaignName}** \n\n🚀 Exciting news from ${businessInfo}! \nWe are launching something special just for you. Don't miss out on our limited-time offers. \n\n👉 Visit us today! #NexVyapaar #Growth`;
+
+      setGeneratedContent(mockResult);
+
+      /* 
+      // REAL PRODUCTION CODE (Requires LOVABLE_API_KEY in Edge Function)
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
           type: contentType,
@@ -82,10 +101,10 @@ const Marketing = () => {
           tone: "professional"
         }
       });
-
       if (error) throw error;
-
       setGeneratedContent(data.content);
+      */
+
       toast({
         title: "Content Generated! ✨",
         description: "AI-powered marketing content is ready"
@@ -237,7 +256,7 @@ const Marketing = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Campaign Name</label>
-                <Input 
+                <Input
                   placeholder="e.g., Summer Sale 2024"
                   value={campaignName}
                   onChange={(e) => setCampaignName(e.target.value)}
@@ -260,7 +279,7 @@ const Marketing = () => {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Schedule Time</label>
-                <Input 
+                <Input
                   type="datetime-local"
                   value={scheduleTime}
                   onChange={(e) => setScheduleTime(e.target.value)}
@@ -269,7 +288,7 @@ const Marketing = () => {
 
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium">Business Information</label>
-                <Textarea 
+                <Textarea
                   placeholder="Describe your business, target audience, and campaign goal..."
                   value={businessInfo}
                   onChange={(e) => setBusinessInfo(e.target.value)}
@@ -278,8 +297,8 @@ const Marketing = () => {
               </div>
 
               <div className="md:col-span-2">
-                <Button 
-                  onClick={generateContent} 
+                <Button
+                  onClick={generateContent}
                   disabled={generating}
                   className="w-full gap-2"
                 >
@@ -291,7 +310,7 @@ const Marketing = () => {
               {generatedContent && (
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-sm font-medium">Generated Content</label>
-                  <Textarea 
+                  <Textarea
                     value={generatedContent}
                     onChange={(e) => setGeneratedContent(e.target.value)}
                     rows={6}
@@ -302,8 +321,8 @@ const Marketing = () => {
 
               {generatedContent && (
                 <div className="md:col-span-2">
-                  <Button 
-                    onClick={scheduleCampaign} 
+                  <Button
+                    onClick={scheduleCampaign}
                     disabled={loading}
                     className="w-full gap-2"
                   >

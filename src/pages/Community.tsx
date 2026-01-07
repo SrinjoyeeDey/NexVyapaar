@@ -6,9 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Heart, 
-  MessageSquare, 
+import {
+  Heart,
+  MessageSquare,
   Share2,
   Send,
   Sparkles,
@@ -19,6 +19,14 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isDemoMode } from "@/hooks/useDemoMode";
+
+const DEMO_POSTS: Post[] = [
+  { id: "p1", title: "Wholesale prices for Rice increasing?", content: "Has anyone else noticed a hike in Basmati prices from the mandi? Distributors are saying shortages...", category: "tips", likes_count: 24, comments_count: 12, created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), user_id: "u1", profiles: { business_name: "Gupta Kirana Store", display_name: "Rajesh Gupta" } },
+  { id: "p2", title: "Looking for reliable POS machine", content: "Need suggestions for a good billing machine under 15k. Currently using calculator and notebook.", category: "tips", likes_count: 15, comments_count: 45, created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), user_id: "u2", profiles: { business_name: "Sharma General Store" } },
+  { id: "p3", title: "Stock Clearance: 50% off on Biscuits", content: "Clearing out near-expiry stock of Britannia biscuits. Bulk buyers DM me.", category: "ads", likes_count: 8, comments_count: 3, created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), user_id: "u3", profiles: { business_name: "Super Mart Sector 14" } },
+  { id: "p4", title: "Local Vyapaar Sammelan", content: "Meeting for all shopkeepers this Sunday at Community Center to discuss GST issues.", category: "events", likes_count: 56, comments_count: 20, created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), user_id: "u4", profiles: { business_name: "Vyapaar Mandal Association" } },
+];
 
 interface Post {
   id: string;
@@ -46,16 +54,27 @@ const Community = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      navigate("/auth");
-    } else {
+    // Demo mode bypass
+    if (isDemoMode()) {
       fetchPosts();
+      return;
     }
+
+    // Auth is handled by ProtectedLayout
+    fetchPosts();
   }, [navigate, activeTab]);
 
   const fetchPosts = async () => {
     setLoading(true);
+
+    if (isDemoMode()) {
+      setTimeout(() => {
+        setPosts(DEMO_POSTS.filter(p => p.category === activeTab));
+        setLoading(false);
+      }, 500);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("community_posts")
       .select("*")
@@ -80,7 +99,7 @@ const Community = () => {
             .select("business_name, display_name")
             .eq("id", post.user_id)
             .single();
-          
+
           return { ...post, profiles: profile };
         })
       );
@@ -101,7 +120,7 @@ const Community = () => {
 
     setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       toast({
         title: "Not authenticated",
@@ -166,7 +185,7 @@ const Community = () => {
   };
 
   const getCategoryIcon = (category: string) => {
-    switch(category) {
+    switch (category) {
       case "ads": return <TrendingUp className="w-4 h-4" />;
       case "tips": return <Sparkles className="w-4 h-4" />;
       case "events": return <Calendar className="w-4 h-4" />;
@@ -226,8 +245,8 @@ const Community = () => {
               <p className="text-xs text-muted-foreground">
                 Posting to: <span className="font-semibold capitalize">{activeTab}</span>
               </p>
-              <Button 
-                onClick={handleCreatePost} 
+              <Button
+                onClick={handleCreatePost}
                 disabled={isSubmitting}
                 className="gap-2"
               >
@@ -293,7 +312,7 @@ const Community = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-muted-foreground">{post.content}</p>
-                  
+
                   <div className="flex items-center gap-4 pt-4 border-t border-border">
                     <Button
                       variant="ghost"
@@ -308,9 +327,9 @@ const Community = () => {
                       <MessageSquare className="w-4 h-4" />
                       {post.comments_count}
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="gap-2 hover:text-green-500 transition-colors"
                       onClick={() => {
                         navigator.share?.({

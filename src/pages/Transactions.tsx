@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  CreditCard, 
-  LogOut, 
+import {
+  CreditCard,
+  LogOut,
   Download,
   Filter,
   TrendingUp,
@@ -15,6 +16,20 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { isDemoMode } from "@/hooks/useDemoMode";
+
+// Hardcoded demo transactions
+const DEMO_TRANSACTIONS = [
+  { id: "t1", amount: 25000, currency: "₹", payment_gateway: "Bank Transfer", transaction_id: "TXN_88776655", status: "completed", subscription_type: "Stock Purchase: Metro", created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
+  { id: "t2", amount: 1500, currency: "₹", payment_gateway: "UPI", transaction_id: "TXN_12345678", status: "completed", subscription_type: "Electricity Bill", created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
+  { id: "t3", amount: 12000, currency: "₹", payment_gateway: "Cash", transaction_id: "TXN_87654321", status: "completed", subscription_type: "Shop Rent (Advance)", created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString() },
+  { id: "t4", amount: 500, currency: "₹", payment_gateway: "Razorpay", transaction_id: "TXN_11223344", status: "failed", subscription_type: "Software Subscription", created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString() },
+  { id: "t5", amount: 500, currency: "₹", payment_gateway: "Razorpay", transaction_id: "TXN_11223355", status: "completed", subscription_type: "Software Subscription", created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12.1).toISOString() },
+  { id: "t6", amount: 3500, currency: "₹", payment_gateway: "UPI", transaction_id: "TXN_99887766", status: "pending", subscription_type: "Internet Bill", created_at: new Date().toISOString() },
+  { id: "t7", amount: 8000, currency: "₹", payment_gateway: "Bank Transfer", transaction_id: "TXN_55443322", status: "completed", subscription_type: "Stock Purchase: Amul", created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString() },
+  { id: "t8", amount: 200, currency: "₹", payment_gateway: "Cash", transaction_id: "TXN_33445566", status: "completed", subscription_type: "Tea/Snacks Expense", created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 22).toISOString() },
+  { id: "t9", amount: 4500, currency: "₹", payment_gateway: "UPI", transaction_id: "TXN_77665544", status: "completed", subscription_type: "Worker Salary (Part)", created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 28).toISOString() },
+];
 
 interface Transaction {
   id: string;
@@ -34,21 +49,30 @@ const Transactions = () => {
   const [loading, setLoading] = useState(true);
   const [totalSpent, setTotalSpent] = useState(0);
 
+  const { user } = useAuth();
+
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      navigate("/auth");
-    } else {
-      fetchTransactions();
-    }
-  }, [navigate]);
+    fetchTransactions();
+  }, [user]);
 
   const fetchTransactions = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    
+
+    // Demo Mode Logic
+    if (isDemoMode()) {
+      setTimeout(() => {
+        setTransactions(DEMO_TRANSACTIONS);
+        const total = DEMO_TRANSACTIONS.reduce((sum, t) => sum + Number(t.amount), 0);
+        setTotalSpent(total);
+        setLoading(false);
+      }, 500); // Fake delay
+      return;
+    }
+
     if (!user) {
-      navigate("/auth");
+      // If no user and not demo mode, we shouldn't be here (Protected Route handles it)
+      // but just in case, stop loading
+      setLoading(false);
       return;
     }
 
@@ -79,7 +103,7 @@ const Transactions = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch(status) {
+    switch (status) {
       case "completed": return "bg-green-500/10 text-green-700 border-green-500/20";
       case "pending": return "bg-yellow-500/10 text-yellow-700 border-yellow-500/20";
       case "failed": return "bg-red-500/10 text-red-700 border-red-500/20";
@@ -174,7 +198,7 @@ const Transactions = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {transactions.filter(t => 
+                {transactions.filter(t =>
                   new Date(t.created_at).getMonth() === new Date().getMonth()
                 ).length}
               </div>
@@ -190,9 +214,9 @@ const Transactions = () => {
               <Filter className="w-4 h-4" />
               Filter
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="gap-2"
               onClick={exportTransactions}
               disabled={transactions.length === 0}
@@ -232,8 +256,8 @@ const Transactions = () => {
                         <CreditCard className="w-6 h-6 text-primary" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">
-                          {transaction.subscription_type ? `Premium ${transaction.subscription_type} Subscription` : "Payment"}
+                        <h3 className="text-lg font-semibold tracking-tight text-slate-900">
+                          {transaction.subscription_type ? `${transaction.subscription_type}` : "Payment"}
                         </h3>
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(transaction.created_at), "PPP 'at' p")}
@@ -244,7 +268,7 @@ const Transactions = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold mb-2">
+                      <div className="text-xl font-bold text-slate-900 mb-1">
                         {transaction.currency} {transaction.amount}
                       </div>
                       <Badge className={getStatusColor(transaction.status)}>

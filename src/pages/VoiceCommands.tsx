@@ -3,16 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Mic, 
-  MicOff, 
-  LogOut, 
+import {
+  Mic,
+  MicOff,
+  LogOut,
   Volume2,
   Sparkles,
   TrendingUp,
   Users,
   Calendar
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { useToast } from "@/hooks/use-toast";
 
 const VoiceCommands = () => {
@@ -26,7 +28,7 @@ const VoiceCommands = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!token) {
+    if (!token && !isDemoMode()) {
       navigate("/auth");
     }
 

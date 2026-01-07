@@ -15,6 +15,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { supabase } from "@/integrations/supabase/client";
 import Confetti from "react-confetti";
 
@@ -29,10 +30,12 @@ const Billing = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!token) {
+    if (!token && !isDemoMode()) {
       navigate("/auth");
     }
+  }, [navigate]);
 
+  useEffect(() => {
     // Check for payment success
     if (searchParams.get("success") === "true") {
       setShowConfetti(true);
@@ -40,7 +43,7 @@ const Billing = () => {
         title: "Welcome to Premium! 🎉",
         description: "Your subscription is now active"
       });
-      
+
       setTimeout(() => {
         setShowConfetti(false);
         navigate("/dashboard");
@@ -61,7 +64,7 @@ const Billing = () => {
 
   const handleCheckout = async () => {
     setProcessing(true);
-    
+
     // Get real payment URLs based on gateway
     const paymentUrls = {
       stripe: "https://buy.stripe.com/test_demopage",
@@ -71,7 +74,7 @@ const Billing = () => {
     };
 
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (user) {
       // Create pending transaction
       const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -108,14 +111,14 @@ const Billing = () => {
         // In production, this would redirect to actual payment page
         // For demo, we'll complete the transaction after short delay
         window.open(paymentUrls[gateway], '_blank');
-        
+
         // Simulate successful payment after 3 seconds
         setTimeout(async () => {
           await supabase
             .from("transactions")
             .update({ status: "completed" })
             .eq("transaction_id", transactionId);
-          
+
           setProcessing(false);
           navigate("/billing?success=true");
         }, 3000);
@@ -266,8 +269,8 @@ const Billing = () => {
                 </RadioGroup>
               </div>
 
-              <Button 
-                className="w-full gap-2 text-lg py-6" 
+              <Button
+                className="w-full gap-2 text-lg py-6"
                 size="lg"
                 onClick={handleCheckout}
                 disabled={processing}

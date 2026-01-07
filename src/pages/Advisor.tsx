@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,12 +27,30 @@ interface Message {
 
 const Advisor = () => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "Hello! I'm your AI business advisor. How can I help grow your business today?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (isDemoMode()) {
+      return [
+        {
+          role: "assistant",
+          content: "Hello! I'm your AI business advisor. How can I help grow your business today?",
+        },
+        {
+          role: "user",
+          content: "How can I increase my sales this weekend?",
+        },
+        {
+          role: "assistant",
+          content: "Based on your sales data, you usually have a dip on Sunday evenings. I recommend running a 'Sunday Special' flash sale on snacks and beverages between 5 PM and 8 PM. Historically, this boosts your revenue by 18%. Shall I draft a WhatsApp message for this?",
+        }
+      ];
+    }
+    return [
+      {
+        role: "assistant",
+        content: "Hello! I'm your AI business advisor. How can I help grow your business today?",
+      },
+    ];
+  });
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [khataScannerOpen, setKhataScannerOpen] = useState(false);
@@ -88,15 +107,28 @@ const Advisor = () => {
     setInput("");
 
     // Simulate AI response (will be replaced with actual Lovable AI call)
+    // Simulate AI response (will be replaced with actual Lovable AI call)
     setTimeout(() => {
-      const responses = [
-        "Based on your sales data, I recommend promoting your top-selling items during peak hours. This could increase revenue by 15-20%.",
-        "Consider implementing a loyalty program. Customers who feel valued are 3x more likely to return.",
-        "Your weekday sales are lower. Try offering a mid-week special to boost traffic during slower periods.",
-        "Social media engagement can drive foot traffic. Post your daily specials on Instagram and Facebook.",
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      setMessages((prev) => [...prev, { role: "assistant", content: randomResponse }]);
+      let responseContent = "";
+      const lowerInput = input.toLowerCase();
+
+      // Keyword matching logic
+      if (lowerInput.includes("top selling") || lowerInput.includes("categories") || lowerInput.includes("analysis")) {
+        responseContent = "Here is your Top Selling Categories Analysis for this month:\n\n1. **Snacks & Beverages** (45% of revenue) - driven by the new 'Summer Coolers' campaign.\n2. **Groceries & Staples** (30%) - steady demand for Aashirvaad Atta and Dal.\n3. **Personal Care** (15%) - slight dip, consider a bundle offer.\n4. **Household Items** (10%) - stable.\n\n**Recommendation:** Stock up on cold beverages for the upcoming weekend heatwave!";
+      } else if (lowerInput.includes("sale") || lowerInput.includes("revenue") || lowerInput.includes("profit")) {
+        responseContent = "Based on your sales data, I recommend promoting your top-selling items during peak hours (5 PM - 8 PM). This could increase revenue by 15-20%. specifically, try a 'Happy Hour' for snacks.";
+      } else if (lowerInput.includes("customer") || lowerInput.includes("loyalty")) {
+        responseContent = "Consider implementing a loyalty program. Customers who feel valued are 3x more likely to return. You currently have 3 customers at risk of churning - would you like to send them a special offer?";
+      } else if (lowerInput.includes("inventory") || lowerInput.includes("stock")) {
+        responseContent = "Your inventory health is good, but 'Kissan Jam' is running low (5 jars left). Also, you have excess stock of 'Harvest Bread' which expires in 5 days. Suggested action: Bundle bread with jam for a 10% discount.";
+      } else if (lowerInput.includes("marketing") || lowerInput.includes("promote") || lowerInput.includes("ad")) {
+        responseContent = "Social media engagement can drive foot traffic. I've drafted a post for your 'Summer Coolers' campaign. Shall I post it to Instagram and Facebook for you?";
+      } else {
+        // Generative fallback for unmatched queries
+        responseContent = `I see you're asking about "${input}". As an AI Advisor, I'm analyzing your business data... \n\nFor now, I recommend focusing on your weekend sales strategy. Try offering a mid-week special to boost traffic during slower periods.`;
+      }
+
+      setMessages((prev) => [...prev, { role: "assistant", content: responseContent }]);
     }, 1000);
   };
 
@@ -219,7 +251,7 @@ const Advisor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted pb-8">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -253,9 +285,9 @@ const Advisor = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 space-y-6">
         {/* AI Tips Carousel */}
-        <Card className="mb-8">
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
@@ -278,7 +310,7 @@ const Advisor = () => {
             >
               {aiTips.map((tip, index) => (
                 <SwiperSlide key={index}>
-                  <Card className={`bg-gradient-to-br ${tip.color} text-primary-foreground border-0`}>
+                  <Card className={`bg-gradient-to-br ${tip.color} text-primary-foreground border-0 h-full`}>
                     <CardHeader>
                       <CardTitle className="text-lg">{tip.title}</CardTitle>
                       <div className="flex items-center gap-2 text-sm">
@@ -297,34 +329,34 @@ const Advisor = () => {
         </Card>
 
         {/* Chat Interface */}
-        <Card className="h-[500px] flex flex-col">
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Chat with AI Advisor</CardTitle>
             <CardDescription>Ask questions about your business</CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+          <CardContent className="space-y-4">
+            {/* Messages Container with fixed height */}
+            <div className="h-[400px] overflow-y-auto pr-2 space-y-4 scroll-smooth">
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${msg.role === "user"
+                    className={`max-w-[80%] rounded-lg px-4 py-3 ${msg.role === "user"
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                      : "bg-muted text-foreground"
                       }`}
                   >
-                    {msg.content}
+                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                   </div>
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="flex gap-2">
+            {/* Input - Fixed at bottom */}
+            <div className="flex gap-2 pt-4 border-t">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -348,7 +380,7 @@ const Advisor = () => {
         </Card>
 
         {/* Navigation */}
-        <div className="mt-8 flex gap-4">
+        <div className="flex gap-4">
           <Button onClick={() => navigate("/analytics")} variant="outline">
             ← Analytics
           </Button>

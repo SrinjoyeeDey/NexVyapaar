@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mic, Trash2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,39 @@ export default function VoiceHistory() {
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('voice-history') || '[]');
-    setHistory(stored);
+    if (stored.length === 0 && isDemoMode()) {
+      setHistory([
+        {
+          id: "1",
+          timestamp: new Date().toISOString(),
+          command: "Add 50 packets of Parle-G",
+          parsedAction: "Update Inventory",
+          type: "inventory",
+          product: "Parle-G",
+          quantity: 50,
+          updatedModules: ["Inventory"]
+        },
+        {
+          id: "2",
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          command: "Record sale of 2kg Sugar and 1 Oil packet",
+          parsedAction: "Record Sale",
+          type: "sale",
+          amount: 240,
+          updatedModules: ["Sales", "Inventory"]
+        },
+        {
+          id: "3",
+          timestamp: new Date(Date.now() - 86400000).toISOString(),
+          command: "Show me today's profit",
+          parsedAction: "Query Analytics",
+          type: "analytics",
+          updatedModules: ["Analytics"]
+        }
+      ]);
+    } else {
+      setHistory(stored);
+    }
   }, []);
 
   const deleteItem = (id: string) => {
@@ -44,7 +77,7 @@ export default function VoiceHistory() {
       let label = date;
       if (date === today) label = t.voiceHistory.today;
       else if (date === yesterday) label = t.voiceHistory.yesterday;
-      
+
       if (!groups[label]) groups[label] = [];
       groups[label].push(item);
     });
@@ -79,7 +112,7 @@ export default function VoiceHistory() {
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {dateLabel}
               </h2>
-              
+
               <div className="space-y-3">
                 {items.map((item) => (
                   <Card key={item.id} className="group">
@@ -90,24 +123,24 @@ export default function VoiceHistory() {
                             <Mic className="h-5 w-5 text-primary" />
                           </div>
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                             <Clock className="h-3 w-3" />
                             <span>
-                              {new Date(item.timestamp).toLocaleTimeString('en-IN', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
+                              {new Date(item.timestamp).toLocaleTimeString('en-IN', {
+                                hour: '2-digit',
+                                minute: '2-digit'
                               })}
                             </span>
                             <span>|</span>
                             <span>🎤 {t.voiceHistory.voiceCommand}</span>
                           </div>
-                          
+
                           <p className="font-medium text-foreground mb-2">
                             "{item.command}"
                           </p>
-                          
+
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm text-muted-foreground">→ {t.voiceHistory.updated}:</span>
                             {item.updatedModules.map((mod) => (
@@ -118,8 +151,8 @@ export default function VoiceHistory() {
                           </div>
                         </div>
 
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           className="opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => deleteItem(item.id)}

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Camera, Upload, Sparkles, RotateCcw, Download, ArrowLeft } from "lucide-react";
@@ -26,14 +27,15 @@ const ARPreview = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!token) {
+    const isDemo = localStorage.getItem("demo_mode") === "true" || window.location.search.includes("demo=true");
+    if (!token && !isDemo) {
       navigate("/auth");
     }
   }, [navigate]);
 
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: 1280, height: 720 }
       });
       setStream(mediaStream);
@@ -81,21 +83,21 @@ const ARPreview = () => {
       const gradient = context.createLinearGradient(0, 0, canvasRef.current!.width, 0);
       gradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
       gradient.addColorStop(1, 'rgba(236, 72, 153, 0.3)');
-      
+
       // Add overlay effects
       context.fillStyle = gradient;
       context.fillRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-      
+
       // Add AR markers
       context.strokeStyle = '#8b5cf6';
       context.lineWidth = 3;
       context.strokeRect(100, 100, 300, 200);
-      
+
       context.font = '24px Arial';
       context.fillStyle = '#fff';
       context.fillText('New Signage', 120, 90);
       context.fillText('Updated Lighting', 120, 320);
-      
+
       setProcessing(false);
       toast({
         title: "AR Preview Applied! ✨",
@@ -166,7 +168,7 @@ const ARPreview = () => {
                   <p className="text-muted-foreground">Start camera to preview</p>
                 </div>
               )}
-              
+
               {stream && !capturedImage && (
                 <video
                   ref={videoRef}

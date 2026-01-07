@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Camera,
@@ -10,13 +10,22 @@ import {
     AlertCircle,
     Package,
     ShoppingCart,
-    Plus
+    Plus,
+    Wifi,
+    WifiOff,
+    CloudUpload,
+    HardDrive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { VisionService, KhataItem } from '@/services/VisionService';
+import { VisionService, KhataItem, CONFIDENCE_THRESHOLDS } from '@/services/VisionService';
+import { imageCacheService } from '@/services/ImageCacheService';
+import { networkAwarenessService } from '@/services/NetworkAwarenessService';
+import { progressiveUploadService } from '@/services/ProgressiveUploadService';
+import { userMessageService } from '@/services/UserMessageService';
 
 interface KhataScannerProps {
     onDataExtracted: (items: KhataItem[]) => void;
@@ -27,8 +36,27 @@ export const KhataScanner: React.FC<KhataScannerProps> = ({ onDataExtracted, con
     const [isScanning, setIsScanning] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [extractedItems, setExtractedItems] = useState<KhataItem[]>([]);
-    const [scanStep, setScanStep] = useState<'idle' | 'uploading' | 'scanning' | 'review'>('idle');
+    const [scanStep, setScanStep] = useState<'idle' | 'caching' | 'uploading' | 'scanning' | 'review'>('idle');
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [scanConfidence, setScanConfidence] = useState(1.0);
+    const [needsConfirmation, setNeedsConfirmation] = useState(false);
+    const [imageId, setImageId] = useState<string | null>(null);
+    const [networkQuality, setNetworkQuality] = useState(networkAwarenessService.getCurrentQuality());
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Monitor network quality
+    useEffect(() => {
+        networkAwarenessService.startMonitoring(30000);
+
+        const unsubscribe = networkAwarenessService.subscribe((quality) => {
+            setNetworkQuality(quality);
+        });
+
+        return () => {
+            unsubscribe();
+            networkAwarenessService.stopMonitoring();
+        };
+    }, []);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -38,28 +66,103 @@ export const KhataScanner: React.FC<KhataScannerProps> = ({ onDataExtracted, con
         reader.onload = async (event) => {
             const base64 = event.target?.result as string;
             setPreviewUrl(base64);
-            processImage(base64);
+            await processImageResilient(base64);
         };
         reader.readAsDataURL(file);
     };
 
-    const processImage = async (base64: string) => {
-        setIsScanning(true);
-        setScanStep('scanning');
-
+    const processImageResilient = async (base64: string) => {
         try {
-            const items = await VisionService.analyzeHandwriting(base64);
-            setExtractedItems(items);
-            setScanStep('review');
-            if (items.length === 0) {
-                toast.warning("Could not extract any items. Please try a clearer picture of your handwriting.");
+            // Step 1: Cache image locally (ALWAYS succeeds, even offline)
+            setScanStep('caching');
+            const contextForCache = context === 'general' ? 'inventory' : context;
+            const cached = await imageCacheService.cacheImage(base64, contextForCache);
+            setImageId(cached.id);
+            toast.success(userMessageService.formatMessage('imageCaptured'));
+
+            // Step 2: Check network quality and queue upload
+            const quality = networkAwarenessService.getCurrentQuality();
+            if (quality.recommendUpload) {
+                setScanStep('uploading');
+                setUploadProgress(0);
+
+                // Upload with progress tracking
+                const uploadResult = await progressiveUploadService.uploadImage(
+                    cached.id,
+                    (progress) => {
+                        setUploadProgress(progress.percentage);
+                    }
+                );
+
+                if (uploadResult.success) {
+                    toast.success(userMessageService.formatMessage('uploadComplete'));
+                } else if (!uploadResult.wasDuplicate) {
+                    // Queue for later if upload failed
+                    await progressiveUploadService.queueUpload(cached.id);
+                    toast.info(userMessageService.formatMessage('uploadPending'));
+                }
             } else {
-                toast.success(`Extracted ${items.length} items from Khata!`);
+                // Queue for later upload when network improves
+                await progressiveUploadService.queueUpload(cached.id);
+                toast.info(userMessageService.formatMessage('uploadPending'));
             }
-        } catch (error) {
-            console.error('Scan Error:', error);
-            toast.error("Failed to process image. Check your internet or Google Cloud credentials.");
-            setScanStep('idle');
+
+            // Step 3: Analyze image with enhanced confidence scoring
+            setScanStep('scanning');
+            setIsScanning(true);
+
+            const result = await VisionService.analyzeHandwritingEnhanced(base64);
+
+            setScanConfidence(result.confidence);
+            setNeedsConfirmation(result.needsConfirmation);
+            setExtractedItems(result.items);
+
+            // Update scan status in cache
+            await imageCacheService.updateScanStatus(
+                cached.id,
+                result.partialFailure ? 'failed' : 'completed',
+                result,
+                result.errorMessage
+            );
+
+            // Step 4: Show appropriate message based on confidence
+            if (result.partialFailure) {
+                toast.warning(result.suggestedAction);
+                // Offer manual entry
+                setScanStep('review');
+                setExtractedItems([{
+                    name: '',
+                    quantity: 0,
+                    unit: 'units',
+                    price: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    type: context === 'sales' ? 'sale' : 'inventory',
+                    confidence: 0,
+                    requiresReview: true
+                }]);
+            } else if (result.needsConfirmation) {
+                toast.info(result.suggestedAction);
+                setScanStep('review');
+            } else {
+                toast.success(result.suggestedAction);
+                setScanStep('review');
+            }
+
+        } catch (error: any) {
+            console.error('Resilient scan error:', error);
+            toast.error(userMessageService.formatMessage('scanFailed'));
+            setScanStep('review');
+            // Provide manual entry fallback
+            setExtractedItems([{
+                name: '',
+                quantity: 0,
+                unit: 'units',
+                price: 0,
+                date: new Date().toISOString().split('T')[0],
+                type: context === 'sales' ? 'sale' : 'inventory',
+                confidence: 0,
+                requiresReview: true
+            }]);
         } finally {
             setIsScanning(false);
         }

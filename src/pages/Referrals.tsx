@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  Gift, 
-  Users, 
+import {
+  Gift,
+  Users,
   TrendingUp,
   Copy,
   Share2,
@@ -14,6 +14,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { supabase } from "@/integrations/supabase/client";
 
 const Referrals = () => {
@@ -27,11 +28,11 @@ const Referrals = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!token) {
+    if (!token && !isDemoMode()) {
       navigate("/auth");
-      return;
+    } else {
+      initializeReferral();
     }
-    initializeReferral();
   }, [navigate]);
 
   const generateReferralCode = (userId: string) => {
@@ -40,11 +41,23 @@ const Referrals = () => {
 
   const initializeReferral = async () => {
     try {
+      if (isDemoMode()) {
+        setReferralCode("SBG8872X");
+        setTotalReferrals(12);
+        setRewardsEarned(8);
+        setReferredUsers([
+          { id: "1", created_at: new Date().toISOString(), reward_claimed: true },
+          { id: "2", created_at: new Date(Date.now() - 86400000).toISOString(), reward_claimed: false }
+        ]);
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const code = generateReferralCode(user.id);
-      
+
       // Check if referral exists
       let { data: referralData } = await supabase
         .from("referrals")

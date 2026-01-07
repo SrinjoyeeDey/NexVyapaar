@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { demoStore } from "@/lib/demoStore";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,18 +51,47 @@ import {
     Legend
 } from "recharts";
 
+// Hardcoded demo data for instant display
+// Hardcoded demo data for instant display
+const DEMO_SALES_DATA = [
+    // Today
+    { id: "101", product_name: "Amul Gold Milk (500ml)", quantity: 12, price: 33 * 12, sale_date: new Date(Date.now() - 1000 * 60 * 30).toISOString(), payment_method: "cash", profit: 24 }, // 30 mins ago
+    { id: "102", product_name: "Britannia Marie Gold", quantity: 5, price: 25 * 5, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), payment_method: "upi", profit: 25 },
+    { id: "103", product_name: "Fortune Sunlite Oil (1L)", quantity: 2, price: 165 * 2, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), payment_method: "upi", profit: 40 },
+    { id: "104", product_name: "Tata Salt (1kg)", quantity: 10, price: 28 * 10, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), payment_method: "cash", profit: 80 },
+
+    // Yesterday
+    { id: "201", product_name: "Aashirvaad Atta (5kg)", quantity: 3, price: 245 * 3, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1.2).toISOString(), payment_method: "upi", profit: 90 },
+    { id: "202", product_name: "Maggi 2-Minute Noodles", quantity: 20, price: 14 * 20, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1.5).toISOString(), payment_method: "cash", profit: 50 },
+    { id: "203", product_name: "Good Day Cashew Cookies", quantity: 8, price: 30 * 8, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1.8).toISOString(), payment_method: "scan_qr", profit: 45 },
+
+    // Last Week
+    { id: "301", product_name: "Coca Cola (2.25L)", quantity: 6, price: 95 * 6, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), payment_method: "cash", profit: 90 },
+    { id: "302", product_name: "Dove Hair Fall Rescue", quantity: 2, price: 340 * 2, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(), payment_method: "upi", profit: 120 },
+    { id: "303", product_name: "Rin Detergent Bar", quantity: 15, price: 10 * 15, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), payment_method: "cash", profit: 30 },
+    { id: "304", product_name: "Everest Turmeric Powder", quantity: 4, price: 42 * 4, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(), payment_method: "upi", profit: 24 },
+    { id: "305", product_name: "Parle-G Gold", quantity: 25, price: 10 * 25, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6.5).toISOString(), payment_method: "cash", profit: 35 },
+
+    // Last Month (Simulating trends)
+    { id: "401", product_name: "India Gate Basmati Rice", quantity: 5, price: 850 * 5, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(), payment_method: "card", profit: 500 },
+    { id: "402", product_name: "Sugar (Loose)", quantity: 50, price: 42 * 50, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(), payment_method: "cash", profit: 200 },
+    { id: "403", product_name: "Surf Excel Matic", quantity: 4, price: 450 * 4, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15).toISOString(), payment_method: "upi", profit: 180 },
+    { id: "404", product_name: "Amul Butter (500g)", quantity: 10, price: 275 * 10, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(), payment_method: "upi", profit: 300 },
+    { id: "405", product_name: "Tata Tea Premium", quantity: 8, price: 140 * 8, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 25).toISOString(), payment_method: "cash", profit: 160 },
+    { id: "406", product_name: "Cadbury Dairy Milk Silk", quantity: 30, price: 80 * 30, sale_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 28).toISOString(), payment_method: "scan_qr", profit: 400 },
+];
+
 interface SaleRecord {
     id: string;
     product_name: string;
     quantity: number;
     price: number;
     sale_date: string;
-    category: string | null;
-    cost_per_unit: number | null;
-    waste_quantity: number | null;
+    payment_method?: string;
+    profit?: number;
 }
 
-const SalesPage = () => {
+const Sales = () => {
     const { t } = useLanguage();
     const queryClient = useQueryClient();
     const [filterTime, setFilterTime] = useState<"today" | "week" | "month" | "all">("today");
@@ -93,11 +124,30 @@ const SalesPage = () => {
     const { data: sales, isLoading } = useQuery({
         queryKey: ['sales-data', filterTime],
         queryFn: async () => {
-            let { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                const { data: { session } } = await supabase.auth.getSession();
-                user = session?.user ?? null;
+            // Demo mode: use hardcoded data
+            if (isDemoMode()) {
+                let filteredSales = [...DEMO_SALES_DATA];
+
+                // Apply time filter
+                const now = new Date();
+                if (filterTime === 'today') {
+                    const todayStr = now.toISOString().split('T')[0];
+                    filteredSales = filteredSales.filter(s => s.sale_date >= todayStr);
+                } else if (filterTime === 'week') {
+                    const lastWeek = new Date(now.setDate(now.getDate() - 7));
+                    const weekStr = lastWeek.toISOString().split('T')[0];
+                    filteredSales = filteredSales.filter(s => s.sale_date >= weekStr);
+                } else if (filterTime === 'month') {
+                    const lastMonth = new Date(now.setMonth(now.getMonth() - 1));
+                    const monthStr = lastMonth.toISOString().split('T')[0];
+                    filteredSales = filteredSales.filter(s => s.sale_date >= monthStr);
+                }
+
+                return filteredSales as SaleRecord[];
             }
+
+            // Real mode: use Supabase
+            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
             let query = supabase
@@ -529,4 +579,4 @@ const SalesPage = () => {
     );
 };
 
-export default SalesPage;
+export default Sales;

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { demoStore } from "@/lib/demoStore";
+import { isDemoMode } from "@/hooks/useDemoMode";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,7 +55,20 @@ import {
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SupplierPriceHistory } from "@/components/SupplierPriceHistory";
+import { useToast } from "@/hooks/use-toast";
 
+// Hardcoded demo data
+// Hardcoded demo data
+const DEMO_SUPPLIERS = [
+  { id: "s1", name: "Metro Cash & Carry", created_at: new Date().toISOString(), contact_person: "Vikram Singh", phone: "9876543210", email: "orders.metro@example.com", delivery_time_days: 1, payment_terms: "Net 15", rating: 4.8, address: "Industrial Area, Phase 1, Chandigarh", notes: "Best for bulk staples" },
+  { id: "s2", name: "Amul Distributors (Official)", created_at: new Date().toISOString(), contact_person: "Rajesh Kumar", phone: "9812345678", email: "rajesh.amul@example.com", delivery_time_days: 1, payment_terms: "Daily", rating: 4.9, address: "Sector 26, Grain Market", notes: "Morning delivery only" },
+  { id: "s3", name: "Fresh Farms Organic", created_at: new Date().toISOString(), contact_person: "Suresh Patel", phone: "9988776655", email: "fresh.farms@example.com", delivery_time_days: 2, payment_terms: "Cash on Delivery", rating: 4.5, address: "Village Kheri, District Ropar", notes: "Fresh veggies, seasonal only" },
+  { id: "s4", name: "Hindustan Unilever Agency", created_at: new Date().toISOString(), contact_person: "Amit Mehta", phone: "9123456780", email: "hul.agency@example.com", delivery_time_days: 3, payment_terms: "Net 30", rating: 4.2, address: "Transport Nagar, Ludhiana", notes: "Minimum order ₹10,000" },
+  { id: "s5", name: "Local Bakery Supplies", created_at: new Date().toISOString(), contact_person: "John D'Souza", phone: "8877665544", email: "john.baker@example.com", delivery_time_days: 1, payment_terms: "Weekly", rating: 4.6, address: "Model Town, Jalandhar", notes: "Breads and buns" },
+  { id: "s6", name: "Nestle Distribution", created_at: new Date().toISOString(), contact_person: "Karan Johar", phone: "7766554433", email: "nestle.dist@example.com", delivery_time_days: 4, payment_terms: "Net 21", rating: 4.3, address: "Focal Point, Mohali", notes: "Maggi, Kitkat, Coffee" },
+  { id: "s7", name: "ITC Limited (Direct)", created_at: new Date().toISOString(), contact_person: "Priya Sharma", phone: "6655443322", email: "priya.itc@example.com", delivery_time_days: 5, payment_terms: "Net 45", rating: 4.7, address: "Industrial Park, Baddi", notes: "Aashirvaad Atta, Sunfeast" },
+  { id: "s8", name: "Sharma Packaging", created_at: new Date().toISOString(), contact_person: "Lalit Sharma", phone: "9911223344", email: "sharma.pack@example.com", delivery_time_days: 2, payment_terms: "Cash", rating: 4.0, address: "Sector 17, Chandigarh", notes: "Carry bags, boxes, tape" },
+];
 interface Supplier {
   id: string;
   name: string;
@@ -94,17 +109,19 @@ const Suppliers = () => {
     delivery_time_days: ""
   });
 
-  // Check auth
+  // Check auth - REMOVED for Demo Mode compatibility
+  /*
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       navigate('/auth');
     }
   }, [navigate]);
+  */
 
   // Real-time subscriptions
   useEffect(() => {
-    let channel = supabase
+    const channel = supabase
       .channel('suppliers-changes')
       .on(
         'postgres_changes',
@@ -125,42 +142,35 @@ const Suppliers = () => {
 
   // Fetch suppliers
   const { data: suppliers, isLoading } = useQuery({
-    queryKey: ['suppliers', sortBy],
+    queryKey: ['suppliers'],
     queryFn: async () => {
-      let { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user ?? null;
+      // Demo mode: use hardcoded data
+      if (isDemoMode()) {
+        return DEMO_SUPPLIERS;
       }
-      if (!user) throw new Error("Not authenticated");
 
-      let query = supabase
+      // Real mode: use Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // Fallback usually shouldn't happen inside ProtectedRoute, but safe to keep or return empty
+        throw new Error("Not authenticated");
+      }
+
+      const { data, error } = await supabase
         .from('suppliers')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('name');
 
-      if (sortBy === "rating") {
-        query = query.order('rating', { ascending: false });
-      } else if (sortBy === "delivery") {
-        query = query.order('delivery_time_days', { ascending: true });
-      } else {
-        query = query.order('name');
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data as Supplier[];
+      return data;
     }
   });
 
   // Add supplier mutation
   const addSupplierMutation = useMutation({
     mutationFn: async (supplier: typeof supplierForm) => {
-      let { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user ?? null;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase
@@ -194,11 +204,7 @@ const Suppliers = () => {
   // Update supplier mutation
   const updateSupplierMutation = useMutation({
     mutationFn: async (supplier: typeof supplierForm) => {
-      let { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user ?? null;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase
@@ -232,11 +238,7 @@ const Suppliers = () => {
   // Delete supplier mutation
   const deleteSupplierMutation = useMutation({
     mutationFn: async (id: string) => {
-      let { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user ?? null;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase

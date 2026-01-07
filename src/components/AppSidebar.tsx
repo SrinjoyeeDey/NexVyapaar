@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   BarChart3,
@@ -16,6 +17,11 @@ import {
   Lightbulb,
   Users,
   Plug,
+  BrainCircuit,
+  Building2,
+  Sparkles,
+  Languages,
+  Shield
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -44,6 +50,7 @@ export function AppSidebar() {
   // CORE BUSINESS - Primary business operations
   const coreBusinessItems = [
     { title: t.nav.dashboard, url: "/dashboard", icon: LayoutDashboard },
+    { title: "Intelligence Hub", url: "/intelligence-hub", icon: BrainCircuit, badge: "AI" },
     { title: t.nav.sales, url: "/sales", icon: ShoppingCart },
     { title: t.nav.inventory, url: "/inventory", icon: Package, badge: "5" },
     { title: t.nav.analytics, url: "/analytics", icon: BarChart3 },
@@ -53,6 +60,7 @@ export function AppSidebar() {
   const operationsItems = [
     { title: t.nav.suppliers, url: "/suppliers", icon: Truck },
     { title: t.nav.purchaseOrders, url: "/purchase-orders", icon: ClipboardList },
+    { title: "Pharmacy Compliance", url: "/compliance", icon: Shield, badge: "NEW" },
     { title: "Transactions", url: "/transactions", icon: FileText },
   ];
 
@@ -60,7 +68,7 @@ export function AppSidebar() {
   const growthItems = [
     { title: t.nav.marketingCampaigns, url: "/marketing", icon: Megaphone },
     { title: t.nav.insights, url: "/insights", icon: Lightbulb },
-    { title: t.nav.community, url: "/community", icon: Users },
+    { title: "Marketplace Map", url: "/marketplace-map", icon: Building2 },
   ];
 
   // TOOLS - Integrations & AR
@@ -68,6 +76,13 @@ export function AppSidebar() {
     { title: t.nav.integrations, url: "/integrations", icon: Plug },
     { title: t.nav.arPreview, url: "/ar-preview", icon: Camera },
     { title: "Help", url: "/community", icon: HelpCircle },
+  ];
+
+  const aiInputItems = [
+    { title: "Voice Assistant", url: "/voice", icon: Mic, badge: "LIVE" },
+    { title: "POS Integration", url: "/pos-demo", icon: Plug, badge: "DEMO" },
+    { title: "Scan Records", url: "/scan-records", icon: Camera },
+    { title: "Vernacular Link", url: "/vernacular-link", icon: Languages, badge: "Hi" },
   ];
 
   const MenuItem = ({ item, isUpgrade = false }: { item: any; isUpgrade?: boolean }) => {
@@ -215,6 +230,25 @@ export function AppSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          <Separator className="my-4" />
+
+          {/* AI INPUT & ADAPTATION */}
+          <SidebarGroup className="px-0">
+            {open && (
+              <div className="px-3 mb-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">AI Input & Adaptation</p>
+              </div>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {aiInputItems.map((item) => (
+                  <SidebarMenuItem key={item.title} className="list-none">
+                    <MenuItem item={item} />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
           {/* Spacer to push upgrade button to bottom */}
           <div className="flex-1" />
@@ -225,14 +259,22 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem className="list-none">
                   <div className={open ? "px-3" : ""}>
-                    <MenuItem
-                      item={{
-                        title: t.nav.upgradeToPremium || "Upgrade Pro",
-                        url: "/billing",
-                        icon: Crown
-                      }}
-                      isUpgrade={true}
-                    />
+                    <div onClick={(e) => {
+                      if (localStorage.getItem("demo_mode") === "true") {
+                        e.preventDefault();
+                        e.stopPropagation(); // Stop NavLink from triggering
+                        toast.info("Billing is simulated in Demo Mode");
+                      }
+                    }}>
+                      <MenuItem
+                        item={{
+                          title: t.nav.upgradeToPremium || "Upgrade Pro",
+                          url: localStorage.getItem("demo_mode") === "true" ? "#" : "/billing",
+                          icon: Crown
+                        }}
+                        isUpgrade={true}
+                      />
+                    </div>
                   </div>
                 </SidebarMenuItem>
               </SidebarMenu>
