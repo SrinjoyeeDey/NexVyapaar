@@ -3,7 +3,7 @@
 <!-- ========================= -->
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Inter&size=28&pause=1000&color=38BDF8&center=true&vCenter=true&width=800&lines=NexVyapaar+-+AI+Operating+System+for+Local+Businesses;Offline-First+%7C+AI-Powered+%7C+Built+for+Bharat;HackTech+All-Girls+Innovation+Track" />
+  <img src="https://readme-typing-svg.demolab.com?font=Inter&size=28&pause=1000&color=38BDF8&center=true&vCenter=true&width=800&lines=NexVyapaar+-+AI+Operating+System+for+Local+Businesses;Offline-First+%7C+AI-Powered+%7C+Built+for+Bharat;HackTechnique+All-Girls+Innovation+Track" />
 </p>
 
 <p align="center">
@@ -106,14 +106,6 @@ No compliance checks | Pharmacy-safe |
 
 ## 🧩 Core Features
 
-### 🧾 Offline-First POS & Billing
-- Works **without internet**
-- Bills stored locally
-- Auto-syncs when network returns
-- No manual upload needed
-
----
-
 ### 🧠 Intelligence Hub (AI Business Copilot)
 - Demand forecasting
 - Smart restock alerts
@@ -123,7 +115,7 @@ No compliance checks | Pharmacy-safe |
 > AI advises. Owner decides.
 
 <p align="center">
-📸 <img width="855" height="914" alt="Screenshot 2026-01-06 171244" src="https://github.com/user-attachments/assets/e09cc7aa-e413-4d38-8945-e7bc0e86453e" />
+<img width="855" height="914" alt="Screenshot 2026-01-06 171244" src="https://github.com/user-attachments/assets/e09cc7aa-e413-4d38-8945-e7bc0e86453e" />
 </p>
 ---
 
@@ -144,7 +136,7 @@ No compliance checks | Pharmacy-safe |
 - Designed for non-technical users
 
 <p align="center">
-📸 <img width="765" height="795" alt="Screenshot 2026-01-06 171412" src="https://github.com/user-attachments/assets/9e4f0db6-8bf4-4986-b33e-237a87b00e79" />
+<img width="765" height="795" alt="Screenshot 2026-01-06 171412" src="https://github.com/user-attachments/assets/9e4f0db6-8bf4-4986-b33e-237a87b00e79" />
 </p>
 ---
 
@@ -156,7 +148,7 @@ No compliance checks | Pharmacy-safe |
 📊 Live sync animation  
 
 <p align="center">
-📸 <img width="1070" height="838" alt="Screenshot 2026-01-06 171427" src="https://github.com/user-attachments/assets/ac4a108d-8d48-407b-bda5-38a818229943" />
+<img width="1070" height="838" alt="Screenshot 2026-01-06 171427" src="https://github.com/user-attachments/assets/ac4a108d-8d48-407b-bda5-38a818229943" />
 </p>
 ---
 
@@ -255,7 +247,6 @@ NexVyapaar exists to:
 - Prevent losses
 - Empower entrepreneurs
 - Build AI that actually helps
-<img width="807" height="890" alt="Screenshot 2026-01-06 171445" src="https://github.com/user-attachments/assets/41e93596-1aaf-4b0f-947c-e234b64232d8" />
 
 ---
 
