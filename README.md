@@ -126,7 +126,7 @@ No compliance checks | Pharmacy-safe |
 - Protects customer health
 
 <p align="center">
-📸 <img width="791" height="854" alt="Screenshot 2026-01-06 171326" src="https://github.com/user-attachments/assets/3791aa69-7937-4b15-9328-c60fe4116313" />
+<img width="791" height="854" alt="Screenshot 2026-01-06 171326" src="https://github.com/user-attachments/assets/3791aa69-7937-4b15-9328-c60fe4116313" />
 </p>
 ---
 
@@ -181,11 +181,7 @@ This project currently runs in **high-fidelity demo mode**:
 <img width="787" height="875" alt="Screenshot 2026-01-06 171310" src="https://github.com/user-attachments/assets/5f209f2f-4935-4253-b654-84c70729d911"  alt="Sales Trend Animation"/>
 </p>
 
-
-<p align="center">
-  <img width="855" height="914" alt="Screenshot 2026-01-06 171244" src="https://github.com/user-attachments/assets/45973416-1616-49e2-abc9-a5f938481020" alt="Inventory Health Animation"/>
-
-</p>
+---
 
 <p align="center">
   <img width="559" height="875" src="https://github.com/user-attachments/assets/3154e39b-6d85-43f4-abaf-90f69134a20e" alt="Expiry Risk Animation"/>
